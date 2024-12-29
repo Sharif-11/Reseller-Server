@@ -14,13 +14,10 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
     }
     res.status(error.statusCode).json(errorResponse)
   } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    console.log('inside prisma error')
-    const { message, path } = knownRequestHandler(error)
     const errorResponse = {
       statusCode: httpStatus.BAD_REQUEST,
       success: false,
-      message,
-      errorMessages: [{ message, path }],
+      message: knownRequestHandler(error),
       stack: error?.stack,
     }
     res.status(httpStatus.BAD_REQUEST).json(errorResponse)

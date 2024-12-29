@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client'
 import { NextFunction, Request, Response } from 'express'
 import authServices from '../services/auth.services'
+import Utility from '../services/utility.services'
 class AuthController {
   async sendOtp(req: Request, res: Response, next: NextFunction) {
     try {
@@ -97,6 +98,71 @@ class AuthController {
         success: true,
         message: 'Seller created successfully',
         data: result,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  async logout(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.clearCookie('token')
+      res.status(200).json({
+        statusCode: 200,
+        success: true,
+        message: 'Logout successful',
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  async updateProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.userId
+      const { name, email, address, zilla } = req.body
+      const result = await authServices.updateProfile(userId as string, {
+        userId,
+        name,
+        email,
+        address,
+        zilla,
+      })
+      res.status(200).json({
+        statusCode: 200,
+        success: true,
+        message: 'Profile updated successfully',
+        data: result,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  async changePassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.userId
+      const { oldPassword, newPassword } = req.body
+      const result = await authServices.changePassword(userId as string, {
+        oldPassword,
+        newPassword,
+      })
+      res.status(200).json({
+        statusCode: 200,
+        success: true,
+        message: result,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  async forgotPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { mobileNo } = req.body
+      const newPassword = Utility.generateOtp()
+      const result = await authServices.forgotPassword(mobileNo, newPassword)
+      await Utility.sendSms(mobileNo, newPassword)
+      res.status(200).json({
+        statusCode: 200,
+        success: true,
+        message: result,
       })
     } catch (error) {
       next(error)

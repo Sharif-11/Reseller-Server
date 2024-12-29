@@ -204,6 +204,101 @@ class AuthService {
       throw error
     }
   }
+  async updateProfile(
+    userId: string,
+    {
+      name,
+      address,
+      email,
+      zilla,
+      shopName,
+    }: Omit<Prisma.UserUpdateInput, 'role' | 'mobileNo' | 'password'>
+  ) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: {
+          userId,
+        },
+      })
+      if (!user) {
+        throw new ApiError(400, 'User not found')
+      }
+      const updatedUser = await prisma.user.update({
+        where: {
+          userId,
+        },
+        data: {
+          name,
+          address,
+          email,
+          zilla,
+          shopName,
+        },
+      })
+      const { password: _, ...userWithoutPassword } = updatedUser
+      return userWithoutPassword
+    } catch (error) {
+      throw error
+    }
+  }
+  async changePassword(
+    userId: string,
+    { oldPassword, newPassword }: { oldPassword: string; newPassword: string }
+  ) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: {
+          userId,
+        },
+      })
+      if (!user) {
+        throw new ApiError(400, 'User not found')
+      }
+      const isPasswordMatch = await Utility.comparePassword(
+        oldPassword,
+        user.password
+      )
+      if (!isPasswordMatch) {
+        throw new ApiError(400, 'Invalid password')
+      }
+      const hashedPassword = await Utility.hashPassword(newPassword)
+      await prisma.user.update({
+        where: {
+          userId,
+        },
+        data: {
+          password: hashedPassword,
+        },
+      })
+      return 'Password changed successfully'
+    } catch (error) {
+      throw error
+    }
+  }
+  async forgotPassword(mobileNo: string, newPassword: string) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: {
+          mobileNo,
+        },
+      })
+      if (!user) {
+        throw new ApiError(400, 'User not found')
+      }
+      const hashedPassword = await Utility.hashPassword(newPassword)
+      await prisma.user.update({
+        where: {
+          mobileNo,
+        },
+        data: {
+          password: hashedPassword,
+        },
+      })
+      return 'Password changed successfully'
+    } catch (error) {
+      throw error
+    }
+  }
 }
 
 export default new AuthService()

@@ -61,6 +61,17 @@ export class Utility {
       throw error
     }
   }
+  static async sendSms(mobileNo: string, message: string) {
+    try {
+      const smsResponse = await axios.get(
+        `https://bulksmsbd.net/api/smsapi?api_key=hsYr6qwobYaKBZdh8xXJ&type=text&number=${mobileNo}&senderid=8809617623563&message=Password:${message}`
+      )
+      console.log(smsResponse.data)
+      return smsResponse.data
+    } catch (error) {
+      throw error
+    }
+  }
 }
 
 export default Utility
