@@ -1,0 +1,43 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+enum Role {
+  Admin
+  Seller
+}
+
+model Contact {
+  mobileNo       String   @unique @id
+  otp            String?
+  otp_created_at DateTime?
+  isVerified     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("contacts")
+}
+model User {
+  userId      String   @unique @default(cuid()) @id
+  mobileNo    String   @unique
+  name        String
+  zilla       String
+  address     String
+  password    String
+  sellerCode  String?
+  shopName    String?
+  email       String?  @unique
+  balance     Int    @default(0)
+  role        Role
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("users")
+}
+
+
