@@ -16,7 +16,9 @@ export const isAuthenticated = (
   }
   try {
     const payload = jwt.verify(token, config.jwtSecret as string)
+    console.log({ payload })
     req.user = payload as any
+
     next()
   } catch (error) {
     next(new ApiError(401, 'Unauthorized'))

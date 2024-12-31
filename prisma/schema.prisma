@@ -11,33 +11,45 @@ enum Role {
   Admin
   Seller
 }
+model User {
+  userId         String   @id @default(cuid()) // Use cuid for userId
+  phoneNo        String   @unique
+  name           String
+  zilla          String
+  upazilla       String
+  address        String
+  referralCode   String?  @unique// Optional
+  email          String?  @unique // Optional and unique
+  password       String
+  isVerified     Boolean  @default(false)
+  balance        Float    @default(0.0) 
+  shopName       String?  // Optional
+  nomineePhone   String?  // Optional
+  role           Role     @default(Seller) // Role with a default value
+  createdAt      DateTime @default(now()) // Timestamp for creation
+  updatedAt      DateTime @updatedAt      // Timestamp for updates
+  @@index([phoneNo], name: "userIndex")
+  @@map("users")        // Optional: Custom table name in the database
+}
+
 
 model Contact {
-  mobileNo       String   @unique @id
-  otp            String?
-  otp_created_at DateTime?
+  id             String   @id @default(cuid()) // Use cuid for unique id
+  phoneNo        String   @unique
   isVerified     Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  @@map("contacts")
+  isBlocked      Boolean  @default(false)
+  totalOTP       Int      @default(0)
+  otp            String  // Optional
+  otpCreatedAt   DateTime // Optional, timestamp when OTP was created
+  createdAt      DateTime @default(now()) // Timestamp for creation
+  updatedAt      DateTime @updatedAt      // Timestamp for updates
+@@index([phoneNo], name: "contactIndex")
+  @@map("contacts") // Optional: Custom table name in the database
 }
-model User {
-  userId      String   @unique @default(cuid()) @id
-  mobileNo    String   @unique
-  name        String
-  zilla       String
-  address     String
-  password    String
-  sellerCode  String?
-  shopName    String?
-  email       String?  @unique
-  balance     Int    @default(0)
-  role        Role
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
-  @@map("users")
-}
+
+
+
+
 
 

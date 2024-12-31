@@ -13,6 +13,7 @@ export default {
   apiKey: 'hsYr6qwobYaKBZdh8xXJ',
   senderId: '8809617623563',
   smsUrl: 'http://bulksmsbd.net/api/smsapi',
+  maximumOtpAttempts: 3,
 
   // cloudinaryKey: process.env.CLOUDINARY_KEY,
   // cloudinarySecret: process.env.CLOUDINARY_SECRET,
