@@ -28,6 +28,7 @@ model User {
   role           Role     @default(Seller) // Role with a default value
   createdAt      DateTime @default(now()) // Timestamp for creation
   updatedAt      DateTime @updatedAt      // Timestamp for updates
+  reviews         ProductReview[] // One-to-many relationship with ProductReview
   @@index([phoneNo], name: "userIndex")
   @@map("users")        // Optional: Custom table name in the database
 }
@@ -47,9 +48,75 @@ model Contact {
   @@map("contacts") // Optional: Custom table name in the database
 }
 
+model Product {
+  productId             Int      @id @default(autoincrement())
+  category              String?  // Optional field for category
+  name                  String
+  imageUrl              String
+  basePrice             Int      // Integer for base price
+  stockSize             Int
+  isVerifiedProduct     Boolean
+  suggestedMaxPrice     Int?     // Optional field for suggested max price (integer)
+  description           String
+  videoUrl              String?  // Optional field for video URL
+  location              String
+  deliveryChargeInside  Int      // Integer for delivery charge inside location
+  deliveryChargeOutside Int      // Integer for delivery charge outside location
+  published             Boolean
+  createdAt             DateTime @default(now()) // Timestamp for creation
+  updatedAt             DateTime @updatedAt      // Timestamp for updates
+  
+  reviews               ProductReview[] // One-to-many relationship with ProductReview
+  images                ProductImage[]  // One-to-many relationship with ProductImage
+  metas                 ProductMeta[]   // One-to-many relationship with ProductMeta
+  @@map("products") // Optional: Custom table name in the database
+}
 
+model ProductReview {
+  reviewId     Int      @id @default(autoincrement()) // Auto increment for review ID
+  productId    Int      // Foreign key to Product table
+  sellerId     String   // Foreign key to User table (Seller)
+  review       String   // Text review for the product
+  sellerPhone  String   // Seller's phone number
+  sellerName   String   // Seller's name
+  rating       Int      // Rating for the product (e.g., 1-5 scale)
+  createdAt    DateTime @default(now()) // Timestamp for when the review is created
+  updatedAt    DateTime @updatedAt      // Timestamp for updates to the review
 
+  // Foreign key relations
+  product      Product  @relation(fields: [productId], references: [productId]) 
+  seller       User     @relation(fields: [sellerId], references: [userId])
 
+  @@index([productId], name: "productReviewIndex") // Optional index on productId
+  @@index([sellerId], name: "sellerReviewIndex")   // Optional index on sellerId
+  @@map("product_reviews") // Optional: Custom table name in the database
+}
 
+model ProductImage {
+  imageId   Int      @id @default(autoincrement()) // Unique identifier for the image
+  productId Int      // Foreign key referencing the Product model
+  imageUrl  String   // URL of the product image
+  createdAt DateTime @default(now()) // Timestamp for creation
+  updatedAt DateTime @updatedAt      // Timestamp for updates
 
+  // Relation with Product
+  product   Product  @relation(fields: [productId], references: [productId])
+
+  @@index([productId], name: "productImageIndex") // Index on productId for faster queries
+  @@map("product_images") // Optional: Custom table name in the database
+}
+model ProductMeta {
+  metaId    Int      @id @default(autoincrement()) // Unique identifier for the meta info
+  productId Int      // Foreign key referencing the Product model
+  key       String   // Type of meta info (e.g., "size", "color")
+  value     String   // Value of the meta info (e.g., "M", "Red")
+  createdAt DateTime @default(now()) // Timestamp for creation
+  updatedAt DateTime @updatedAt      // Timestamp for updates
+
+  // Relation with Product
+  product   Product  @relation(fields: [productId], references: [productId])
+
+  @@index([productId, key], name: "productMetaIndex") // Index for productId and key
+  @@map("product_meta") // Optional: Custom table name in the database
+}
 
