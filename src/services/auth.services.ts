@@ -3,7 +3,6 @@ import ApiError from '../utils/ApiError'
 import prisma from '../utils/prisma'
 import contactServices from './contact.services'
 import otpServices from './otp.services'
-import SmsServices from './sms.services'
 import userServices from './user.services'
 import Utility from './utility.services'
 
@@ -244,26 +243,7 @@ class AuthServices {
    * @returns A status message indicating the result
    */
   async forgotPassword(phoneNo: string) {
-    // Check if the user exists
-    const user = await prisma.user.findUnique({
-      where: { phoneNo },
-    })
-
-    if (!user) {
-      throw new ApiError(400, 'এই ফোন নম্বরটি রেজিস্টার করা হয়নি')
-    }
-
-    // Generate a random password
-    const newPassword = Utility.generateOtp() // 6-digit OTP as a temporary password
-
-    // Hash the new password
-    const hashedPassword = await Utility.hashPassword(newPassword)
-    await userServices.updatePassword(user.userId, hashedPassword)
-
-    // Send the new password to the user via SMS
-    await SmsServices.sendPassword(user.phoneNo, newPassword)
-
-    return { sendPassword: true }
+    return await userServices.forgotPassword(phoneNo)
   }
 }
 

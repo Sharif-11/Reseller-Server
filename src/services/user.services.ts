@@ -1,7 +1,10 @@
 import { Prisma, User } from '@prisma/client'
+import config from '../config'
 import ApiError from '../utils/ApiError'
 import prisma from '../utils/prisma'
 import contactServices from './contact.services'
+import SmsServices from './sms.services'
+import Utility from './utility.services'
 
 class UserServices {
   /**
@@ -344,6 +347,64 @@ class UserServices {
     })
 
     return updatedUser
+  }
+  async forgotPassword(phoneNo: string) {
+    // Generate a random password
+    const newPassword = Utility.generateOtp() // 6-digit OTP as a temporary password
+
+    // Hash the new password
+    const hashedPassword = await Utility.hashPassword(newPassword)
+    const user = await prisma.user.findUnique({ where: { phoneNo } })
+
+    if (!user)
+      throw new ApiError(
+        404,
+        'এই ফোন নম্বর দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি'
+      )
+    if (user.isLocked && user.role !== 'Admin') {
+      throw new ApiError(
+        400,
+        'আপনার অ্যাকাউন্ট লক করা হয়েছে। আনলক করতে আপনার অ্যাকাউন্ট রিচার্জ করুন।'
+      )
+    }
+
+    if (user.role !== 'Admin') {
+      if (user.forgotPasswordSmsCount < config.maxForgotPasswordAttempts) {
+        // Free SMS
+        await prisma.user.update({
+          where: { phoneNo },
+          data: {
+            forgotPasswordSmsCount: { increment: 1 },
+            password: hashedPassword,
+          },
+        })
+        await SmsServices.sendPassword(user.phoneNo, newPassword)
+      } else {
+        // Paid SMS
+        const newBalance = +user.balance - config.smsCharge
+
+        await prisma.user.update({
+          where: { phoneNo },
+          data: {
+            forgotPasswordSmsCount: { increment: 1 },
+            balance: newBalance,
+            isLocked: newBalance < 0,
+            password: hashedPassword,
+          },
+        })
+
+        await SmsServices.sendPassword(user.phoneNo, newPassword)
+      }
+    } else {
+      await prisma.user.update({
+        where: { phoneNo },
+        data: {
+          password: hashedPassword,
+        },
+      })
+      await SmsServices.sendPassword(user.phoneNo, newPassword)
+    }
+    return { sendPassword: true }
   }
   /**
    * Get all users with filters (phoneNo, name), pagination is optional

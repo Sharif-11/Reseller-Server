@@ -25,6 +25,8 @@ model User {
   balance        Decimal  @default(0.0) @db.Decimal(15, 2) // Decimal for balance with precision 10 and scale 2
   shopName       String?  // Optional
   nomineePhone   String?  // Optional
+  forgotPasswordSmsCount Int     @default(0)    // Tracks the number of forgot password SMS sent
+  isLocked             Boolean  @default(false) // Indicates whether the user is locked
   role           Role     @default(Seller) // Role with a default value
   createdAt      DateTime @default(now()) // Timestamp for creation
   updatedAt      DateTime @updatedAt      // Timestamp for updates
