@@ -117,11 +117,12 @@ class UserServices {
     if (amount <= 0) {
       throw new ApiError(400, 'পরিমাণটি বৈধ হতে হবে')
     }
-
+    const newBalance = +user.balance + amount
     const updatedUser = await prisma.user.update({
       where: { userId },
       data: {
-        balance: +user.balance + amount,
+        balance: newBalance,
+        isLocked: newBalance < 0,
       },
     })
 
