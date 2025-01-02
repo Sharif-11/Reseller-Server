@@ -118,7 +118,7 @@ class UserServices {
     const updatedUser = await prisma.user.update({
       where: { userId },
       data: {
-        balance: user.balance + amount,
+        balance: +user.balance + amount,
       },
     })
 
@@ -140,7 +140,7 @@ class UserServices {
     const updatedUser = await prisma.user.update({
       where: { userId },
       data: {
-        balance: user.balance - amount,
+        balance: Number(user.balance) - amount,
       },
     })
 
@@ -166,14 +166,14 @@ class UserServices {
       throw new ApiError(400, 'পরিমাণটি বৈধ হতে হবে')
     }
 
-    if (user.balance < amount) {
+    if (Number(user.balance) < amount) {
       throw new ApiError(400, 'অপর্যাপ্ত ব্যালেন্স')
     }
 
     const updatedUser = await prisma.user.update({
       where: { userId },
       data: {
-        balance: user.balance - amount,
+        balance: +user.balance - amount,
       },
     })
 
