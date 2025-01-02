@@ -124,6 +124,28 @@ class UserServices {
 
     return updatedUser
   }
+  async deductBalance(userId: string, amount: number): Promise<User> {
+    const user = await prisma.user.findUnique({
+      where: { userId },
+    })
+
+    if (!user) {
+      throw new ApiError(404, 'ব্যবহারকারী পাওয়া যায়নি')
+    }
+
+    if (amount <= 0) {
+      throw new ApiError(400, 'পরিমাণটি বৈধ হতে হবে')
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { userId },
+      data: {
+        balance: user.balance - amount,
+      },
+    })
+
+    return updatedUser
+  }
 
   /**
    * Withdraw balance from the user's account

@@ -22,7 +22,7 @@ model User {
   email          String?  @unique // Optional and unique
   password       String
   isVerified     Boolean  @default(false)
-  balance        Float    @default(0.0) 
+  balance        Decimal  @default(0.0) @db.Decimal(15, 2) // Decimal for balance with precision 10 and scale 2
   shopName       String?  // Optional
   nomineePhone   String?  // Optional
   role           Role     @default(Seller) // Role with a default value
