@@ -14,6 +14,7 @@ export default {
   senderId: '8809617623563',
   smsUrl: 'http://bulksmsbd.net/api/smsapi',
   maximumOtpAttempts: 3,
+  nodeEnv: process.env.NODE_ENV || 'development',
 
   // cloudinaryKey: process.env.CLOUDINARY_KEY,
   // cloudinarySecret: process.env.CLOUDINARY_SECRET,

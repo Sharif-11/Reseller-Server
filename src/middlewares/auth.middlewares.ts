@@ -16,11 +16,32 @@ export const isAuthenticated = (
   }
   try {
     const payload = jwt.verify(token, config.jwtSecret as string)
-    console.log({ payload })
+
     req.user = payload as any
 
     next()
   } catch (error) {
     next(new ApiError(401, 'Unauthorized'))
   }
+}
+
+export const verifySeller = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!req.user || req.user.role !== 'Seller') {
+    return next(new ApiError(403, 'Access forbidden: Sellers only'))
+  }
+  next()
+}
+export const verifyAdmin = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!req.user || req.user.role !== 'Admin') {
+    return next(new ApiError(403, 'Access forbidden: Admins only'))
+  }
+  next()
 }

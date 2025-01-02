@@ -28,7 +28,7 @@ model User {
   role           Role     @default(Seller) // Role with a default value
   createdAt      DateTime @default(now()) // Timestamp for creation
   updatedAt      DateTime @updatedAt      // Timestamp for updates
-  reviews         ProductReview[] // One-to-many relationship with ProductReview
+
   @@index([phoneNo], name: "userIndex")
   @@map("users")        // Optional: Custom table name in the database
 }
@@ -66,7 +66,7 @@ model Product {
   createdAt             DateTime @default(now()) // Timestamp for creation
   updatedAt             DateTime @updatedAt      // Timestamp for updates
   
-  reviews               ProductReview[] // One-to-many relationship with ProductReview
+ 
   images                ProductImage[]  // One-to-many relationship with ProductImage
   metas                 ProductMeta[]   // One-to-many relationship with ProductMeta
   @@map("products") // Optional: Custom table name in the database
@@ -83,10 +83,6 @@ model ProductReview {
   createdAt    DateTime @default(now()) // Timestamp for when the review is created
   updatedAt    DateTime @updatedAt      // Timestamp for updates to the review
 
-  // Foreign key relations
-  product      Product  @relation(fields: [productId], references: [productId]) 
-  seller       User     @relation(fields: [sellerId], references: [userId])
-
   @@index([productId], name: "productReviewIndex") // Optional index on productId
   @@index([sellerId], name: "sellerReviewIndex")   // Optional index on sellerId
   @@map("product_reviews") // Optional: Custom table name in the database
@@ -101,7 +97,6 @@ model ProductImage {
 
   // Relation with Product
   product   Product  @relation(fields: [productId], references: [productId])
-
   @@index([productId], name: "productImageIndex") // Index on productId for faster queries
   @@map("product_images") // Optional: Custom table name in the database
 }
@@ -116,7 +111,9 @@ model ProductMeta {
   // Relation with Product
   product   Product  @relation(fields: [productId], references: [productId])
 
-  @@index([productId, key], name: "productMetaIndex") // Index for productId and key
-  @@map("product_meta") // Optional: Custom table name in the database
+  @@unique([productId, key, value], name: "uniqueProductMeta") // Unique constraint for productId, key, and value
+  @@index([productId, key], name: "productMetaIndex")          // Index for productId and key
+  @@map("product_meta")                                       // Optional: Custom table name in the database
 }
+
 

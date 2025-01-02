@@ -1,6 +1,15 @@
 import ApiError from '../utils/ApiError' // Importing your custom ApiError
 import prisma from '../utils/prisma'
 
+interface GetProductsFilters {
+  name?: string
+  category?: string
+  minPrice?: number
+  maxPrice?: number
+  page?: number
+  pageSize?: number
+}
+
 class ProductImageService {
   /**
    * Add multiple images for a product
@@ -28,15 +37,16 @@ class ProductImageService {
    * @param productId - ID of the product
    * @param imageId - ID of the image to delete
    */
-  async deleteImage(productId: number, imageId: number) {
+  async deleteImage(imageId: number) {
+    // console.log({ productId, imageId })
     try {
       return await prisma.productImage.delete({
         where: {
           imageId,
-          productId,
         },
       })
     } catch (error) {
+      console.log(error)
       throw new ApiError(500, 'ছবি মুছতে ব্যর্থ। আবার চেষ্টা করুন।')
     }
   }
@@ -143,11 +153,11 @@ class ProductService {
     category: string
     basePrice: number
     stockSize: number
-    suggestedMaximumPrice: number
+    suggestedMaxPrice: number
     description: string
     location: string
-    insideDeliveryCharge: number
-    outsideDeliveryCharge: number
+    deliveryChargeInside: number
+    deliveryChargeOutside: number
     videoUrl?: string
   }) {
     const {
@@ -156,11 +166,11 @@ class ProductService {
       category,
       basePrice,
       stockSize,
-      suggestedMaximumPrice,
+      suggestedMaxPrice,
       description,
       location,
-      insideDeliveryCharge,
-      outsideDeliveryCharge,
+      deliveryChargeInside,
+      deliveryChargeOutside,
       videoUrl,
     } = data
 
@@ -172,14 +182,14 @@ class ProductService {
           category,
           basePrice,
           stockSize,
-          suggestedMaxPrice: suggestedMaximumPrice,
-          description,
+          suggestedMaxPrice,
           videoUrl,
           location,
-          deliveryChargeInside: insideDeliveryCharge,
-          deliveryChargeOutside: outsideDeliveryCharge,
+          deliveryChargeInside,
+          deliveryChargeOutside,
           isVerifiedProduct: false,
           published: false,
+          description,
         },
       })
 
@@ -187,6 +197,109 @@ class ProductService {
     } catch (error) {
       console.error('Error creating product:', error)
       throw new ApiError(500, 'পণ্য তৈরি করতে ব্যর্থ। আবার চেষ্টা করুন।')
+    }
+  }
+  /**
+   * Get a product by ID, including images and metas
+   * @param productId - ID of the product to retrieve
+   */
+  async getProduct(productId: number) {
+    try {
+      const product = await prisma.product.findUnique({
+        where: { productId },
+        include: {
+          images: {
+            select: {
+              imageId: true,
+              imageUrl: true,
+            },
+          },
+          metas: {
+            select: {
+              key: true,
+              value: true,
+            },
+          },
+        },
+      })
+
+      if (!product) {
+        throw new ApiError(404, 'পণ্য পাওয়া যায়নি।')
+      }
+
+      return product
+    } catch (error) {
+      console.error('Error retrieving product:', error)
+      throw new ApiError(500, 'পণ্য লোড করতে ব্যর্থ। আবার চেষ্টা করুন।')
+    }
+  }
+  async getAllProducts(filters: GetProductsFilters, isPublished?: boolean) {
+    const { name, category, minPrice, maxPrice, page, pageSize } = filters
+
+    const where: any = {}
+
+    // Add optional 'published' filter
+    if (isPublished !== undefined) {
+      where.published = isPublished // Filter by published status if specified
+    }
+
+    // Add filters for name and category
+    if (name) {
+      where.name = {
+        startsWith: name,
+        mode: 'insensitive', // Case-insensitive prefix match
+      }
+    }
+
+    if (category) {
+      where.category = {
+        startsWith: category,
+        mode: 'insensitive', // Case-insensitive prefix match
+      }
+    }
+
+    // Add price range filter
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      where.basePrice = {
+        ...(minPrice !== undefined ? { gte: minPrice } : {}),
+        ...(maxPrice !== undefined ? { lte: maxPrice } : {}),
+      }
+    }
+
+    // Pagination is optional
+    let skip, take
+    if (page && pageSize) {
+      skip = (page - 1) * pageSize
+      take = pageSize
+    }
+
+    // Fetch data
+    const products = await prisma.product.findMany({
+      where,
+      select: {
+        name: true,
+        imageUrl: true,
+        basePrice: true,
+      },
+      orderBy: {
+        createdAt: 'desc', // Most recently added at the top
+      },
+      ...(skip !== undefined && take !== undefined ? { skip, take } : {}), // Include pagination if provided
+    })
+
+    // Total count for pagination (only calculated if pagination is used)
+    const totalProducts =
+      page && pageSize ? await prisma.product.count({ where }) : undefined
+
+    return {
+      products,
+      ...(totalProducts !== undefined && page && pageSize
+        ? {
+            totalProducts,
+            currentPage: page,
+            totalPages: Math.ceil(totalProducts / pageSize),
+          }
+        : {}),
     }
   }
 
@@ -251,6 +364,10 @@ class ProductService {
           deliveryChargeInside: insideDeliveryCharge,
           deliveryChargeOutside: outsideDeliveryCharge,
         },
+        include: {
+          images: true,
+          metas: true,
+        },
       })
 
       return updatedProduct
@@ -301,7 +418,9 @@ class ProductService {
       throw new ApiError(404, 'পণ্য পাওয়া যায়নি।')
     }
 
-    return this.imageService.addImages(productId, imageUrls)
+    await this.imageService.addImages(productId, imageUrls)
+
+    return this.getProduct(product.productId)
   }
 
   /**
@@ -356,7 +475,8 @@ class ProductService {
       throw new ApiError(404, 'পণ্য পাওয়া যায়নি।')
     }
 
-    return this.metaService.addMeta(productId, metaEntries)
+    await this.metaService.addMeta(productId, metaEntries)
+    return this.getProduct(product.productId)
   }
   /**
    * Add a review to a product
@@ -385,14 +505,22 @@ class ProductService {
     if (!product) {
       throw new ApiError(404, 'পণ্য পাওয়া যায়নি।')
     }
+    //check seller id existence
+    const seller = await prisma.user.findUnique({
+      where: { userId: sellerId },
+    })
+
+    if (!seller) {
+      throw new ApiError(404, 'বিক্রেতা পাওয়া যায়নি।')
+    }
 
     return this.reviewService.addReview(
       productId,
       sellerId,
       review,
       rating,
-      sellerPhone,
-      sellerName
+      seller.phoneNo,
+      seller.name
     )
   }
 
@@ -410,7 +538,7 @@ class ProductService {
       throw new ApiError(404, 'পণ্য পাওয়া যায়নি।')
     }
 
-    return await prisma.$transaction(async prisma => {
+    const result = await prisma.$transaction(async prisma => {
       // manually clear the meta data don't use meta service
 
       await prisma.productMeta.deleteMany({
@@ -427,6 +555,30 @@ class ProductService {
         data: newMetaData,
       })
     })
+    return this.getProduct(product.productId)
+  }
+  async deleteImage(productId: number, imageId: number) {
+    const product = await this.getProduct(productId)
+
+    if (!product) {
+      throw new ApiError(404, 'পণ্য পাওয়া যায়নি।')
+    }
+    // check whether the image exists
+    const image = await prisma.productImage.findUnique({
+      where: { imageId },
+    })
+
+    if (!image) {
+      throw new ApiError(404, 'ছবি পাওয়া যায়নি।')
+    }
+
+    //check whether the image is related to this product
+    if (image.productId !== productId) {
+      throw new ApiError(400, 'ছবি এই পণ্যের নয়।')
+    }
+
+    await this.imageService.deleteImage(imageId)
+    return this.getProduct(product.productId)
   }
 }
 

@@ -30,7 +30,7 @@ class ProductController {
       const { productId } = req.params
       const updates = req.body
       const updatedProduct = await productServices.updateProduct({
-        productId,
+        productId: +productId,
         ...updates,
       })
       res.status(200).json({
@@ -112,7 +112,8 @@ class ProductController {
   async addProductMeta(req: Request, res: Response, next: NextFunction) {
     try {
       const { productId } = req.params
-      const meta = req.body
+      const { meta } = req.body
+      console.log(meta)
       const updatedProduct = await productServices.addProductMeta(
         +productId,
         meta
@@ -134,7 +135,7 @@ class ProductController {
   async updateProductMeta(req: Request, res: Response, next: NextFunction) {
     try {
       const { productId } = req.params
-      const meta = req.body
+      const { meta } = req.body
       const updatedProduct = await productServices.updateProductMeta(
         +productId,
         meta
@@ -178,6 +179,71 @@ class ProductController {
         message: 'পণ্যের রিভিউ সফলভাবে যোগ করা হয়েছে',
         success: true,
         data: updatedProduct,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  async deleteImage(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { productId, imageId } = req.params
+      const updatedProduct = await productServices.deleteImage(
+        +productId,
+        +imageId
+      )
+      res.status(200).json({
+        statusCode: 200,
+        message: 'ছবি সফলভাবে মুছে ফেলা হয়েছে',
+        success: true,
+        data: updatedProduct,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  async getAllProducts(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { name, category, minPrice, maxPrice, page, pageSize } = req.query
+
+      // Prepare filters with proper types
+      const filters = {
+        name: name as string | undefined,
+        category: category as string | undefined,
+        minPrice: minPrice ? parseInt(minPrice as string, 10) : undefined,
+        maxPrice: maxPrice ? parseInt(maxPrice as string, 10) : undefined,
+        page: page ? parseInt(page as string, 10) : undefined,
+        pageSize: pageSize ? parseInt(pageSize as string, 10) : undefined,
+      }
+
+      // Call the service
+      const result = await productServices.getAllProducts(
+        filters,
+        req.user?.role == 'Admin' ? undefined : true
+      )
+
+      res.status(200).json({
+        statusCode: 200,
+        message: 'সকল পণ্যের তালিকা',
+        success: true,
+        data: result,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  async getProduct(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { productId } = req.params
+      const role = req?.user?.role
+      const product = await productServices.getProduct(+productId)
+      if (!role || role == 'Seller') {
+        product.stockSize = product.stockSize > 0 ? 1 : 0
+      }
+      res.status(200).json({
+        statusCode: 200,
+        message: 'পণ্য সফলভাবে পেয়েছেন',
+        success: true,
+        data: product,
       })
     } catch (error) {
       next(error)

@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client'
 import { ErrorRequestHandler } from 'express'
+import config from '../config'
 import ApiError from '../utils/ApiError'
 import { knownRequestHandler } from './prismaErrorHandler'
 const httpStatus = require('http-status')
@@ -10,7 +11,7 @@ const globalErrorHandler: ErrorRequestHandler = (error, req, res, next) => {
       statusCode: error.statusCode,
       success: false,
       message: error.message,
-      stack: error.stack,
+      stack: config.nodeEnv === 'development' ? error.stack : undefined,
     }
     res.status(error.statusCode).json(errorResponse)
   } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
