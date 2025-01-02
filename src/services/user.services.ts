@@ -387,14 +387,19 @@ class UserServices {
         await prisma.user.update({
           where: { phoneNo },
           data: {
-            forgotPasswordSmsCount: { increment: 1 },
             balance: newBalance,
-            isLocked: newBalance < 0,
             password: hashedPassword,
           },
         })
 
         await SmsServices.sendPassword(user.phoneNo, newPassword)
+        await prisma.user.update({
+          where: { phoneNo },
+          data: {
+            forgotPasswordSmsCount: { increment: 1 },
+            isLocked: newBalance < 0,
+          },
+        })
       }
     } else {
       await prisma.user.update({
