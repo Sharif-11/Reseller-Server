@@ -18,6 +18,7 @@ authRouter.patch(
   isAuthenticated,
   authControllers.updateProfile
 )
+authRouter.patch('/unlock-user', authControllers.unlockUser)
 authRouter.post('/forgot-password', authControllers.forgotPassword)
 
 export default authRouter

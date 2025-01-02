@@ -458,6 +458,23 @@ class UserServices {
 
     return users
   }
+  // unlock user
+  async unlockUser(phoneNo: string) {
+    const user = await prisma.user.findUnique({ where: { phoneNo } })
+
+    if (!user)
+      throw new ApiError(
+        404,
+        'এই ফোন নম্বর দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি'
+      )
+
+    await prisma.user.update({
+      where: { phoneNo },
+      data: { isLocked: false, forgotPasswordSmsCount: 0 },
+    })
+
+    return { unLocked: true }
+  }
 }
 
 export default new UserServices()

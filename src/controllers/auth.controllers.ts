@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express'
 import AuthServices from '../services/auth.services'
 import otpServices from '../services/otp.services'
+import userServices from '../services/user.services'
 
 class AuthController {
   /**
@@ -241,6 +242,21 @@ class AuthController {
       res.status(200).json({
         statusCode: 200,
         message: 'নতুন পাসওয়ার্ড আপনার মোবাইল নম্বরে পাঠানো হয়েছে',
+        success: true,
+        data,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  // unlockUser controller method
+  async unlockUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { phoneNo } = req.body
+      const data = await userServices.unlockUser(phoneNo)
+      res.status(200).json({
+        statusCode: 200,
+        message: 'ব্যবহারকারী সফলভাবে আনলক করা হয়েছে',
         success: true,
         data,
       })
