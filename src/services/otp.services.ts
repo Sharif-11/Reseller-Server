@@ -29,7 +29,7 @@ class OtpServices {
     if (user) {
       throw new ApiError(
         400,
-        'ফোন নম্বরটি ইতিমধ্যে একটি ব্যবহারকারীর সাথে যুক্ত।'
+        'ফোন নম্বরটি ইতিমধ্যে একটি ব্যবহারকারীর সাথে যুক্ত।',
       )
     }
 
@@ -40,7 +40,7 @@ class OtpServices {
     if (contact.isBlocked) {
       throw new ApiError(
         403,
-        'অতিরিক্ত ওটিপি অনুরোধের কারণে এই কন্টাক্টটি ব্লক করা হয়েছে।'
+        'অতিরিক্ত ওটিপি অনুরোধের কারণে এই কন্টাক্টটি ব্লক করা হয়েছে।',
       )
     }
 
@@ -48,7 +48,7 @@ class OtpServices {
       await contactServices.blockContact(phoneNo)
       throw new ApiError(
         403,
-        'বহুবার ওটিপি অনুরোধ করার কারণে কন্টাক্টটি ব্লক করা হয়েছে।'
+        'বহুবার ওটিপি অনুরোধ করার কারণে কন্টাক্টটি ব্লক করা হয়েছে।',
       )
     }
 
@@ -76,18 +76,21 @@ class OtpServices {
     if (!contact.otp || !contact.otpCreatedAt) {
       throw new ApiError(
         400,
-        'ওটিপি পাওয়া যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।'
+        'ওটিপি পাওয়া যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।',
       )
+    }
+    if (contact.isVerified) {
+      return { otpVerified: true }
     }
 
     const otpExpiryTime = new Date(
-      contact.otpCreatedAt.getTime() + config.otpExpiresIn
+      contact.otpCreatedAt.getTime() + config.otpExpiresIn,
     )
 
     if (new Date() > otpExpiryTime) {
       throw new ApiError(
         400,
-        'ওটিপি মেয়াদোত্তীর্ণ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।'
+        'ওটিপি মেয়াদোত্তীর্ণ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।',
       )
     }
 
