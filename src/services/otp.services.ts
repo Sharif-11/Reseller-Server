@@ -80,7 +80,7 @@ class OtpServices {
       )
     }
     if (contact.isVerified) {
-      return { otpVerified: true }
+      return { alreadyVerified: true }
     }
 
     const otpExpiryTime = new Date(

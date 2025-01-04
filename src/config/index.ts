@@ -15,7 +15,7 @@ export default {
   smsUrl: 'http://bulksmsbd.net/api/smsapi',
   maximumOtpAttempts: 3,
   nodeEnv: process.env.NODE_ENV || 'development',
-  smsCharge: 0.35,
+  smsCharge: 0.75,
   maxForgotPasswordAttempts: 3,
 
   // cloudinaryKey: process.env.CLOUDINARY_KEY,

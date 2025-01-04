@@ -105,84 +105,7 @@ class UserServices {
    * @param amount - The amount to add to the balance
    * @returns The updated user object with the new balance
    */
-  async addBalance(userId: string, amount: number): Promise<User> {
-    const user = await prisma.user.findUnique({
-      where: { userId },
-    })
-
-    if (!user) {
-      throw new ApiError(404, 'ব্যবহারকারী পাওয়া যায়নি')
-    }
-
-    if (amount <= 0) {
-      throw new ApiError(400, 'পরিমাণটি বৈধ হতে হবে')
-    }
-    const newBalance = +user.balance + amount
-    const updatedUser = await prisma.user.update({
-      where: { userId },
-      data: {
-        balance: newBalance,
-        isLocked: newBalance < 0,
-      },
-    })
-
-    return updatedUser
-  }
-  async deductBalance(userId: string, amount: number): Promise<User> {
-    const user = await prisma.user.findUnique({
-      where: { userId },
-    })
-
-    if (!user) {
-      throw new ApiError(404, 'ব্যবহারকারী পাওয়া যায়নি')
-    }
-
-    if (amount <= 0) {
-      throw new ApiError(400, 'পরিমাণটি বৈধ হতে হবে')
-    }
-
-    const updatedUser = await prisma.user.update({
-      where: { userId },
-      data: {
-        balance: Number(user.balance) - amount,
-      },
-    })
-
-    return updatedUser
-  }
-
-  /**
-   * Withdraw balance from the user's account
-   * @param userId - The user ID of the user
-   * @param amount - The amount to withdraw from the balance
-   * @returns The updated user object with the new balance
-   */
-  async withdrawBalance(userId: string, amount: number): Promise<User> {
-    const user = await prisma.user.findUnique({
-      where: { userId },
-    })
-
-    if (!user) {
-      throw new ApiError(404, 'ব্যবহারকারী পাওয়া যায়নি')
-    }
-
-    if (amount <= 0) {
-      throw new ApiError(400, 'পরিমাণটি বৈধ হতে হবে')
-    }
-
-    if (Number(user.balance) < amount) {
-      throw new ApiError(400, 'অপর্যাপ্ত ব্যালেন্স')
-    }
-
-    const updatedUser = await prisma.user.update({
-      where: { userId },
-      data: {
-        balance: +user.balance - amount,
-      },
-    })
-
-    return updatedUser
-  }
+ 
 
   /**
    * Add or update the referral code for the user
@@ -252,7 +175,7 @@ class UserServices {
     if (existingUser) {
       throw new ApiError(
         400,
-        'এই ফোন নম্বরটি ইতিমধ্যেই একটি ব্যবহারকারীর সাথে যুক্ত'
+        'এই ফোন নম্বরটি ইতিমধ্যেই একটি ব্যবহারকারীর সাথে যুক্ত',
       )
     }
     if (email) {
@@ -262,7 +185,7 @@ class UserServices {
       if (existingEmailUser) {
         throw new ApiError(
           400,
-          'এই ইমেলটি ইতিমধ্যেই একটি ব্যবহারকারীর সাথে যুক্ত'
+          'এই ইমেলটি ইতিমধ্যেই একটি ব্যবহারকারীর সাথে যুক্ত',
         )
       }
     }
@@ -305,7 +228,7 @@ class UserServices {
       email?: string
       shopName?: string
       nomineePhone?: string
-    }
+    },
   ): Promise<User> {
     // console.log({ userId, updates })
     const user = await prisma.user.findUnique({
@@ -360,12 +283,12 @@ class UserServices {
     if (!user)
       throw new ApiError(
         404,
-        'এই ফোন নম্বর দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি'
+        'এই ফোন নম্বর দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি',
       )
     if (user.isLocked && user.role !== 'Admin') {
       throw new ApiError(
         400,
-        'আপনার অ্যাকাউন্ট লক করা হয়েছে। আনলক করতে আপনার অ্যাকাউন্ট রিচার্জ করুন।'
+        'আপনার অ্যাকাউন্ট লক করা হয়েছে। আনলক করতে আপনার অ্যাকাউন্ট রিচার্জ করুন।',
       )
     }
 
@@ -422,7 +345,7 @@ class UserServices {
   async getAllUsers(
     filters: { phoneNo?: string; name?: string } = {},
     page?: number,
-    pageSize?: number
+    pageSize?: number,
   ): Promise<User[]> {
     const query: Prisma.UserFindManyArgs = {
       where: {
@@ -465,7 +388,7 @@ class UserServices {
     if (!user)
       throw new ApiError(
         404,
-        'এই ফোন নম্বর দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি'
+        'এই ফোন নম্বর দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি',
       )
 
     await prisma.user.update({

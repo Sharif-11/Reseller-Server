@@ -71,7 +71,7 @@ class ProductMetaService {
   // Method to add new meta information
   async addMeta(
     productId: number,
-    metaEntries: { key: string; value: string }[]
+    metaEntries: { key: string; value: string }[],
   ) {
     try {
       const newMetaData = metaEntries.map(entry => ({
@@ -104,7 +104,7 @@ class ProductReviewService {
     review: string,
     rating: number,
     sellerPhone: string,
-    sellerName: string
+    sellerName: string,
   ) {
     if (!review || review.trim() === '') {
       throw new ApiError(400, 'রিভিউ লেখাটি খালি হতে পারে না।')
@@ -152,7 +152,7 @@ class ProductService {
     imageUrl: string
     category: string
     basePrice: number
-    stockSize: number
+    stockSize?: number
     suggestedMaxPrice: number
     description: string
     location: string
@@ -181,7 +181,7 @@ class ProductService {
           imageUrl,
           category,
           basePrice,
-          stockSize,
+          stockSize: Number(stockSize) || 0,
           suggestedMaxPrice,
           videoUrl,
           location,
@@ -464,7 +464,7 @@ class ProductService {
    */
   async addProductMeta(
     productId: number,
-    metaEntries: { key: string; value: string }[]
+    metaEntries: { key: string; value: string }[],
   ) {
     // Check if the product exists
     const product = await prisma.product.findUnique({
@@ -520,14 +520,14 @@ class ProductService {
       review,
       rating,
       seller.phoneNo,
-      seller.name
+      seller.name,
     )
   }
 
   // this is transactional operation
   async updateProductMeta(
     productId: number,
-    metaEntries: { key: string; value: string }[]
+    metaEntries: { key: string; value: string }[],
   ) {
     // Check if the product exists
     const product = await prisma.product.findUnique({

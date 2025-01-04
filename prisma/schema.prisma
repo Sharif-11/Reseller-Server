@@ -1,121 +1,147 @@
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
+
 enum Role {
   Admin
   Seller
 }
-model User {
-  userId         String   @id @default(cuid()) // Use cuid for userId
-  phoneNo        String   @unique
-  name           String
-  zilla          String
-  upazilla       String
-  address        String
-  referralCode   String?  @unique// Optional
-  email          String?  @unique // Optional and unique
-  password       String
-  isVerified     Boolean  @default(false)
-  balance        Decimal  @default(0.0) @db.Decimal(15, 2) // Decimal for balance with precision 10 and scale 2
-  shopName       String?  // Optional
-  nomineePhone   String?  // Optional
-  forgotPasswordSmsCount Int     @default(0)    // Tracks the number of forgot password SMS sent
-  isLocked             Boolean  @default(false) // Indicates whether the user is locked
-  role           Role     @default(Seller) // Role with a default value
-  createdAt      DateTime @default(now()) // Timestamp for creation
-  updatedAt      DateTime @updatedAt      // Timestamp for updates
 
-  @@index([phoneNo], name: "userIndex")
-  @@map("users")        // Optional: Custom table name in the database
+enum TransactionType {
+  Credit
+  Debit
 }
 
+model User {
+  userId                 String   @id @default(cuid()) // Use cuid for userId
+  phoneNo                String   @unique
+  name                   String
+  zilla                  String
+  upazilla               String
+  address                String
+  referralCode           String?  @unique // Optional
+  email                  String?  @unique // Optional and unique
+  password               String
+  isVerified             Boolean  @default(false)
+  balance                Decimal  @default(0.0) @db.Decimal(15, 2) // Decimal for balance with precision 10 and scale 2
+  shopName               String? // Optional
+  nomineePhone           String? // Optional
+  forgotPasswordSmsCount Int      @default(0) // Tracks the number of forgot password SMS sent
+  isLocked               Boolean  @default(false) // Indicates whether the user is locked
+  role                   Role     @default(Seller) // Role with a default value
+  createdAt              DateTime @default(now()) // Timestamp for creation
+  updatedAt              DateTime @updatedAt // Timestamp for updates
+  version                Int      @default(1) // Version for optimistic concurrency control
+
+  @@index([phoneNo], name: "userIndex")
+  @@map("users") // Optional: Custom table name in the database
+}
 
 model Contact {
-  id             String   @id @default(cuid()) // Use cuid for unique id
-  phoneNo        String   @unique
-  isVerified     Boolean  @default(false)
-  isBlocked      Boolean  @default(false)
-  totalOTP       Int      @default(0)
-  otp            String  // Optional
-  otpCreatedAt   DateTime // Optional, timestamp when OTP was created
-  createdAt      DateTime @default(now()) // Timestamp for creation
-  updatedAt      DateTime @updatedAt      // Timestamp for updates
-@@index([phoneNo], name: "contactIndex")
+  id           String   @id @default(cuid()) // Use cuid for unique id
+  phoneNo      String   @unique
+  isVerified   Boolean  @default(false)
+  isBlocked    Boolean  @default(false)
+  totalOTP     Int      @default(0)
+  otp          String // Optional
+  otpCreatedAt DateTime // Optional, timestamp when OTP was created
+  createdAt    DateTime @default(now()) // Timestamp for creation
+  updatedAt    DateTime @updatedAt // Timestamp for updates
+
+  @@index([phoneNo], name: "contactIndex")
   @@map("contacts") // Optional: Custom table name in the database
 }
 
 model Product {
   productId             Int      @id @default(autoincrement())
-  category              String?  // Optional field for category
+  category              String? // Optional field for category
   name                  String
   imageUrl              String
-  basePrice             Int      // Integer for base price
-  stockSize             Int
+  basePrice             Decimal  @db.Decimal(15, 2) // Integer for base price
+  stockSize             Int      @default(0) // Integer for stock size
   isVerifiedProduct     Boolean
-  suggestedMaxPrice     Int?     // Optional field for suggested max price (integer)
+  suggestedMaxPrice     Decimal  @db.Decimal(15, 2) // Optional field for suggested max price (integer)
   description           String
-  videoUrl              String?  // Optional field for video URL
+  videoUrl              String? // Optional field for video URL
   location              String
-  deliveryChargeInside  Int      // Integer for delivery charge inside location
-  deliveryChargeOutside Int      // Integer for delivery charge outside location
+  deliveryChargeInside  Decimal  @db.Decimal(15, 2) // Integer for delivery charge inside location
+  deliveryChargeOutside Decimal  @db.Decimal(15, 2) // Integer for delivery charge outside location
   published             Boolean
   createdAt             DateTime @default(now()) // Timestamp for creation
-  updatedAt             DateTime @updatedAt      // Timestamp for updates
-  
- 
-  images                ProductImage[]  // One-to-many relationship with ProductImage
-  metas                 ProductMeta[]   // One-to-many relationship with ProductMeta
+  updatedAt             DateTime @updatedAt // Timestamp for updates
+
+  images ProductImage[] // One-to-many relationship with ProductImage
+  metas  ProductMeta[] // One-to-many relationship with ProductMeta
+
   @@map("products") // Optional: Custom table name in the database
 }
 
 model ProductReview {
-  reviewId     Int      @id @default(autoincrement()) // Auto increment for review ID
-  productId    Int      // Foreign key to Product table
-  sellerId     String   // Foreign key to User table (Seller)
-  review       String   // Text review for the product
-  sellerPhone  String   // Seller's phone number
-  sellerName   String   // Seller's name
-  rating       Int      // Rating for the product (e.g., 1-5 scale)
-  createdAt    DateTime @default(now()) // Timestamp for when the review is created
-  updatedAt    DateTime @updatedAt      // Timestamp for updates to the review
+  reviewId    Int      @id @default(autoincrement()) // Auto increment for review ID
+  productId   Int // Foreign key to Product table
+  sellerId    String // Foreign key to User table (Seller)
+  review      String // Text review for the product
+  sellerPhone String // Seller's phone number
+  sellerName  String // Seller's name
+  rating      Int? // Rating for the product (e.g., 1-5 scale)
+  createdAt   DateTime @default(now()) // Timestamp for when the review is created
+  updatedAt   DateTime @updatedAt // Timestamp for updates to the review
 
   @@index([productId], name: "productReviewIndex") // Optional index on productId
-  @@index([sellerId], name: "sellerReviewIndex")   // Optional index on sellerId
+  @@index([sellerId], name: "sellerReviewIndex") // Optional index on sellerId
   @@map("product_reviews") // Optional: Custom table name in the database
 }
 
 model ProductImage {
   imageId   Int      @id @default(autoincrement()) // Unique identifier for the image
-  productId Int      // Foreign key referencing the Product model
-  imageUrl  String   // URL of the product image
+  productId Int // Foreign key referencing the Product model
+  imageUrl  String // URL of the product image
   createdAt DateTime @default(now()) // Timestamp for creation
-  updatedAt DateTime @updatedAt      // Timestamp for updates
+  updatedAt DateTime @updatedAt // Timestamp for updates
 
   // Relation with Product
-  product   Product  @relation(fields: [productId], references: [productId])
+  product Product @relation(fields: [productId], references: [productId])
+
   @@index([productId], name: "productImageIndex") // Index on productId for faster queries
   @@map("product_images") // Optional: Custom table name in the database
 }
+
 model ProductMeta {
   metaId    Int      @id @default(autoincrement()) // Unique identifier for the meta info
-  productId Int      // Foreign key referencing the Product model
-  key       String   // Type of meta info (e.g., "size", "color")
-  value     String   // Value of the meta info (e.g., "M", "Red")
+  productId Int // Foreign key referencing the Product model
+  key       String // Type of meta info (e.g., "size", "color")
+  value     String // Value of the meta info (e.g., "M", "Red")
   createdAt DateTime @default(now()) // Timestamp for creation
-  updatedAt DateTime @updatedAt      // Timestamp for updates
+  updatedAt DateTime @updatedAt // Timestamp for updates
 
   // Relation with Product
-  product   Product  @relation(fields: [productId], references: [productId])
+  product Product @relation(fields: [productId], references: [productId])
 
   @@unique([productId, key, value], name: "uniqueProductMeta") // Unique constraint for productId, key, and value
-  @@index([productId, key], name: "productMetaIndex")          // Index for productId and key
-  @@map("product_meta")                                       // Optional: Custom table name in the database
+  @@index([productId, key], name: "productMetaIndex") // Index for productId and key
+  @@map("product_meta") // Optional: Custom table name in the database
 }
 
+model Transaction {
+  id             Int             @id @default(autoincrement())
+  userId         String // Foreign key to User table
+  userName       String // Name of the transaction (e.g., "Sell Commission", "Team Commission", etc.)
+  userPhoneNo    String // Phone number of the user
+  type           TransactionType // credit or debit
+  amount         Decimal         @db.Decimal(15, 2) // Amount of the transaction (suitable for financial transactions)
+  reason         String // Reason for the transaction (e.g., "Sell Commission", "Team Commission", etc.)
+  reference      String? // Reference details for credit transactions (e.g., "Referred Person")
+  referralLevel  Int?
+  remarks        String?
+  paymentMethod  String?
+  paymentPhoneNo String?
+  transactionId  String?         @unique
+  createdAt      DateTime        @default(now())
 
+  @@map("transactions")
+}

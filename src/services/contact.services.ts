@@ -14,6 +14,7 @@ class ContactServices {
       data: {
         phoneNo,
         otp,
+        isVerified: false,
         otpCreatedAt: new Date(),
         totalOTP: 1, // Set totalOTP to 1 when creating a new contact
       },

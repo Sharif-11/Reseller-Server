@@ -113,7 +113,7 @@ class AuthController {
       const data = await AuthServices.verifyOtp(phoneNo, otp)
       res.status(200).json({
         statusCode: 200,
-        message: !data.otpVerified
+        message: data.otpVerified
           ? 'OTP সফলভাবে যাচাই করা হয়েছে'
           : 'এই নম্বরটি ইতিমধ্যে যাচাই করা হয়েছে',
         success: true,
