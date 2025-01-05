@@ -115,7 +115,7 @@ class UserServices {
    */
   async addReferralCode(userId: string, referralCode: string): Promise<User> {
     // Check if the referral code is unique
-    await this.checkReferralCodeUnique(referralCode)
+    
 
     const user = await prisma.user.findUnique({
       where: { userId },
@@ -124,7 +124,13 @@ class UserServices {
     if (!user) {
       throw new ApiError(404, 'ব্যবহারকারী পাওয়া যায়নি')
     }
-
+    if(!user.isVerified){
+      throw new ApiError(400, 'You are not a verified seller yet. Please confirm minimum 1 order to get verified.')
+    }
+    if(user.referralCode){
+      throw new ApiError(400, 'You have already added a referral code.')
+    }
+    await this.checkReferralCodeUnique(referralCode)
     const updatedUser = await prisma.user.update({
       where: { userId },
       data: {

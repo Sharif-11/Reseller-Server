@@ -25,6 +25,9 @@ model User {
   upazilla               String
   address                String
   referralCode           String?  @unique // Optional
+  referredBy             User?    @relation("UserReferredBy", fields: [referredByPhone], references: [phoneNo]) // Self-referencing relationship
+  referredByPhone        String? // Stores the phone number of the referrer
+  referrals              User[]   @relation("UserReferredBy") // Inverse relation for users referred by this user
   email                  String?  @unique // Optional and unique
   password               String
   isVerified             Boolean  @default(false)
@@ -144,4 +147,16 @@ model Transaction {
   createdAt      DateTime        @default(now())
 
   @@map("transactions")
+}
+
+model Commission {
+  id         Int      @id @default(autoincrement())
+  startPrice Decimal  @db.Decimal(15, 2)
+  endPrice   Decimal  @db.Decimal(15, 2)
+  commission Decimal  @db.Decimal(15, 2)
+  level      Int
+  createdAt  DateTime @default(now())
+
+  @@unique([startPrice, endPrice, level], name: "uniqueCommissionRange")
+  @@map("commissions")
 }
