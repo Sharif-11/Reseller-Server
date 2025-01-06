@@ -12,7 +12,10 @@ adminRouter.use('/transactions', transactionRouters)
 adminRouter.post('/commissions', commissionController.createCommissions)
 adminRouter.get('/commissions', commissionController.getFullCommissionTable)
 adminRouter.put('/commissions', commissionController.updateCommissionTable)
-
+adminRouter.get(
+  '/calculate-commissions',
+  commissionController.calculateCommissions
+)
 adminRouter.get(
   '/commissions/:price',
   commissionController.getCommissionsByPrice

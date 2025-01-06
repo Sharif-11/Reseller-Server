@@ -70,6 +70,24 @@ class CommissionController {
       next(error)
     }
   }
+  async calculateCommissions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { price, phoneNo } = req.body // Price should be passed as a route parameter
+      const commissions = await commissionServices.calculateCommissions(
+        phoneNo,
+        Number(price)
+      )
+
+      res.status(200).json({
+        statusCode: 200,
+        message: 'Commissions calculated successfully.',
+        success: true,
+        data: commissions,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
 }
 
 export default new CommissionController()

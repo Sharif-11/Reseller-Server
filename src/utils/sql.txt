@@ -1,0 +1,29 @@
+WITH RECURSIVE parent_tree AS (
+  -- Base case: start with the target user
+  SELECT 
+    "phoneNo", 
+    "name", 
+    1 AS "level",  -- Start from level 1 (immediate parent)
+    "referredByPhone"
+  FROM "users"
+  WHERE "phoneNo" = '01710000006'  -- Replace with the phone number of the target user
+
+  UNION ALL
+
+  -- Recursive case: find the parent of each user in the tree
+  SELECT 
+    u."phoneNo", 
+    u."name", 
+    pt."level" + 1 AS "level",  -- Increment the level for each parent
+    u."referredByPhone"
+  FROM "users" u
+  JOIN parent_tree pt ON u."phoneNo" = pt."referredByPhone"
+)
+-- Select the result with all parents up to level n, excluding the target user
+SELECT 
+  "phoneNo", 
+  "name", 
+  "level"
+FROM parent_tree
+WHERE "phoneNo" != '01710000006'  -- Exclude the target user
+ORDER BY "level";  -- Order by level from root to the target user

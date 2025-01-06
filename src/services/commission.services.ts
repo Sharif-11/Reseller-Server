@@ -149,6 +149,68 @@ export class CommissionService {
     // Convert grouped data to an array
     return Object.values(groupedData)
   }
+  async calculateCommissions(userPhone: string, price: number) {
+    // Step 1: Fetch all commission levels for the given price
+    const commissions = await prisma.commission.findMany({
+      where: {
+        startPrice: { lte: price },
+        endPrice: { gte: price },
+      },
+      orderBy: { level: 'asc' }, // Ensure commissions are sorted by level
+    })
+
+    // Step 2: Fetch all parents of the user using a recursive CTE-like logic
+    const parentTree: {
+      phoneNo: string
+      name: string
+      level: number
+    }[] = await prisma.$queryRawUnsafe(
+      `
+      WITH RECURSIVE parent_tree AS (
+        -- Base case: start with the target user
+        SELECT 
+          "phoneNo", 
+          "name", 
+          0 AS "level", 
+          "referredByPhone"
+        FROM "users"
+        WHERE "phoneNo" = '${userPhone}' -- Replace with the target user's phone number
+  
+        UNION ALL
+  
+        -- Recursive case: find the parent of each user in the tree
+        SELECT 
+          u."phoneNo", 
+          u."name", 
+          pt."level" + 1 AS "level", 
+          u."referredByPhone"
+        FROM "users" u
+        JOIN parent_tree pt ON u."phoneNo" = pt."referredByPhone"
+      )
+      SELECT 
+        "phoneNo", 
+        "name", 
+        "level"
+      FROM parent_tree
+      WHERE "phoneNo" != '${userPhone}' -- Exclude the target user
+      ORDER BY "level";
+    `,
+      userPhone
+    )
+
+    // Step 3: Map commissions to the parent tree
+    const result = parentTree.map((parent: any) => {
+      const commission = commissions.find(c => c.level === parent.level)
+      return {
+        phoneNo: parent.phoneNo,
+        name: parent.name,
+        level: parent.level,
+        commissionAmount: commission ? commission.commission : 0, // Assign commission if found
+      }
+    })
+    console.log({ commissions, parentTree, result })
+    return result
+  }
 }
 
 export default new CommissionService()
