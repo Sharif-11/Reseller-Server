@@ -17,6 +17,7 @@ export default {
   nodeEnv: process.env.NODE_ENV || 'development',
   smsCharge: 0.75,
   maxForgotPasswordAttempts: 3,
+  maximumWallets: 3,
 
   // cloudinaryKey: process.env.CLOUDINARY_KEY,
   // cloudinarySecret: process.env.CLOUDINARY_SECRET,

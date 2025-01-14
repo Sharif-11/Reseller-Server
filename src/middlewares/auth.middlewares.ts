@@ -4,8 +4,9 @@ import { NextFunction, Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
 import config from '../config'
 import ApiError from '../utils/ApiError'
+import prisma from '../utils/prisma'
 
-export const isAuthenticated = (
+export const isAuthenticated = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -16,6 +17,16 @@ export const isAuthenticated = (
   }
   try {
     const payload = jwt.verify(token, config.jwtSecret as string)
+    console.log({ payload })
+    // check if user with userId exists
+    const { userId } = payload as any
+    const user = await prisma.user.findUnique({
+      where: { userId },
+    })
+    console.log({ user })
+    if (!user) {
+      throw new Error('User not found')
+    }
 
     req.user = payload as any
 

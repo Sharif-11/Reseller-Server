@@ -105,7 +105,6 @@ class UserServices {
    * @param amount - The amount to add to the balance
    * @returns The updated user object with the new balance
    */
- 
 
   /**
    * Add or update the referral code for the user
@@ -115,7 +114,6 @@ class UserServices {
    */
   async addReferralCode(userId: string, referralCode: string): Promise<User> {
     // Check if the referral code is unique
-    
 
     const user = await prisma.user.findUnique({
       where: { userId },
@@ -124,10 +122,13 @@ class UserServices {
     if (!user) {
       throw new ApiError(404, 'ব্যবহারকারী পাওয়া যায়নি')
     }
-    if(!user.isVerified){
-      throw new ApiError(400, 'You are not a verified seller yet. Please confirm minimum 1 order to get verified.')
+    if (!user.isVerified) {
+      throw new ApiError(
+        400,
+        'You are not a verified seller yet. Please confirm minimum 1 order to get verified.'
+      )
     }
-    if(user.referralCode){
+    if (user.referralCode) {
       throw new ApiError(400, 'You have already added a referral code.')
     }
     await this.checkReferralCodeUnique(referralCode)
@@ -181,7 +182,7 @@ class UserServices {
     if (existingUser) {
       throw new ApiError(
         400,
-        'এই ফোন নম্বরটি ইতিমধ্যেই একটি ব্যবহারকারীর সাথে যুক্ত',
+        'এই ফোন নম্বরটি ইতিমধ্যেই একটি ব্যবহারকারীর সাথে যুক্ত'
       )
     }
     if (email) {
@@ -191,7 +192,7 @@ class UserServices {
       if (existingEmailUser) {
         throw new ApiError(
           400,
-          'এই ইমেলটি ইতিমধ্যেই একটি ব্যবহারকারীর সাথে যুক্ত',
+          'এই ইমেলটি ইতিমধ্যেই একটি ব্যবহারকারীর সাথে যুক্ত'
         )
       }
     }
@@ -234,7 +235,7 @@ class UserServices {
       email?: string
       shopName?: string
       nomineePhone?: string
-    },
+    }
   ): Promise<User> {
     // console.log({ userId, updates })
     const user = await prisma.user.findUnique({
@@ -289,12 +290,12 @@ class UserServices {
     if (!user)
       throw new ApiError(
         404,
-        'এই ফোন নম্বর দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি',
+        'এই ফোন নম্বর দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি'
       )
     if (user.isLocked && user.role !== 'Admin') {
       throw new ApiError(
         400,
-        'আপনার অ্যাকাউন্ট লক করা হয়েছে। আনলক করতে আপনার অ্যাকাউন্ট রিচার্জ করুন।',
+        'আপনার অ্যাকাউন্ট লক করা হয়েছে। আনলক করতে আপনার অ্যাকাউন্ট রিচার্জ করুন।'
       )
     }
 
@@ -351,7 +352,7 @@ class UserServices {
   async getAllUsers(
     filters: { phoneNo?: string; name?: string } = {},
     page?: number,
-    pageSize?: number,
+    pageSize?: number
   ): Promise<User[]> {
     const query: Prisma.UserFindManyArgs = {
       where: {
@@ -394,7 +395,7 @@ class UserServices {
     if (!user)
       throw new ApiError(
         404,
-        'এই ফোন নম্বর দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি',
+        'এই ফোন নম্বর দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি'
       )
 
     await prisma.user.update({

@@ -40,9 +40,24 @@ model User {
   createdAt              DateTime @default(now()) // Timestamp for creation
   updatedAt              DateTime @updatedAt // Timestamp for updates
   version                Int      @default(1) // Version for optimistic concurrency control
+  wallets                Wallet[] // Relation with Wallet model
 
   @@index([phoneNo], name: "userIndex")
   @@map("users") // Optional: Custom table name in the database
+}
+
+model Wallet {
+  walletId      Int      @id @default(autoincrement()) // Primary key, auto-incremented
+  walletName    String // Name of the wallet
+  walletPhoneNo String // Associated phone number
+  userId        String // Foreign key referencing User
+  userName      String // Name of the user
+  userPhoneNo   String // Phone number of the user
+  user          User     @relation(fields: [userId], references: [userId]) // Relation with User table
+  createdAt     DateTime @default(now()) // Timestamp for creation
+
+  @@unique([walletName, walletPhoneNo]) // Composite unique constraint
+  @@map("wallets") // Optional: Custom table name in the database
 }
 
 model Contact {
@@ -58,6 +73,21 @@ model Contact {
 
   @@index([phoneNo], name: "contactIndex")
   @@map("contacts") // Optional: Custom table name in the database
+}
+
+model WalletContact {
+  id           String    @id @default(cuid()) // Use cuid for unique id
+  phoneNo      String    @unique
+  isVerified   Boolean   @default(false)
+  isBlocked    Boolean   @default(false)
+  totalOTP     Int       @default(0)
+  otp          String? // Optional
+  otpCreatedAt DateTime? // Optional, timestamp when OTP was created
+  createdAt    DateTime  @default(now()) // Timestamp for creation
+  updatedAt    DateTime  @updatedAt // Timestamp for updates
+
+  @@index([phoneNo], name: "walletContactIndex")
+  @@map("wallet_contacts") // Optional: Custom table name in the database
 }
 
 model Product {

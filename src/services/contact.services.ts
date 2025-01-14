@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import ApiError from '../utils/ApiError'
 
 const prisma = new PrismaClient()
 
@@ -100,6 +101,26 @@ class ContactServices {
       },
     })
 
+    return contact
+  }
+  async checkContact(phoneNo: string) {
+    const contact = await prisma.contact.findUnique({
+      where: { phoneNo },
+    })
+    // check if contact is exist
+    if (!contact) {
+      throw new ApiError(404, 'Contact not found')
+    }
+    // check if contact is blocked
+    if (contact.isBlocked) {
+      throw new ApiError(400, 'Contact is blocked')
+    }
+    // check if contact is verified
+    if (contact.isVerified) {
+      return { isVerified: true }
+    } else {
+      throw new ApiError(400, 'Contact is not verified')
+    }
     return contact
   }
 }
