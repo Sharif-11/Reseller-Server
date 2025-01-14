@@ -18,6 +18,7 @@ export default {
   smsCharge: 0.75,
   maxForgotPasswordAttempts: 3,
   maximumWallets: 3,
+  maximumWithdrawAmount: 1000,
 
   // cloudinaryKey: process.env.CLOUDINARY_KEY,
   // cloudinarySecret: process.env.CLOUDINARY_SECRET,

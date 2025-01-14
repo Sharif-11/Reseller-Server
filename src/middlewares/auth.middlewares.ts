@@ -23,7 +23,7 @@ export const isAuthenticated = async (
     const user = await prisma.user.findUnique({
       where: { userId },
     })
-    console.log({ user })
+
     if (!user) {
       throw new Error('User not found')
     }

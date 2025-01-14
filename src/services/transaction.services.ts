@@ -187,9 +187,9 @@ class TransactionService {
 
     await SmsServices.sendMessage(
       userPhoneNo,
-      `আপনার অ্যাকাউন্ট থেকে সফলভাবে ${decimalAmount.toFixed(
+      `${decimalAmount.toFixed(
         2
-      )} টাকা কাটা হয়েছে। tnxId: ${transaction.transactionId}`
+      )} টাকা সফলভাবে আপনার ${paymentMethod} অ্যাকাউন্টে প্রেরণ করা হয়েছে। প্রেরক: ${paymentPhoneNo}। tnxId: ${transactionId}`
     )
     return transaction
   }

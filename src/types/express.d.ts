@@ -6,6 +6,7 @@ declare module 'express' {
       userId: string
       mobileNo: string
       role: string
+      balance: number
     }
   }
 }

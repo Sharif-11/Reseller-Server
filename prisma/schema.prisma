@@ -190,3 +190,27 @@ model Commission {
   @@unique([startPrice, endPrice, level], name: "uniqueCommissionRange")
   @@map("commissions")
 }
+
+model WithdrawRequest {
+  withdrawId         String         @id @default(uuid())
+  userId             String
+  userPhoneNo        String
+  userName           String
+  amount             Decimal        @db.Decimal(15, 2)
+  walletName         String
+  walletPhoneNo      String
+  transactionId      String?
+  transactionPhoneNo String?
+  remarks            String? // Optional
+  requestedAt        DateTime       @default(now())
+  processedAt        DateTime?
+  status             WithdrawStatus @default(pending)
+
+  @@map("withdraw_requests")
+}
+
+enum WithdrawStatus {
+  pending
+  completed
+  rejected
+}
