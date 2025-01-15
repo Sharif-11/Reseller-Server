@@ -1,6 +1,6 @@
 import axios from 'axios'
 import config from '../config'
-import { SmsServiceError } from '../utils/ApiError'
+import ApiError, { SmsServiceError } from '../utils/ApiError'
 
 type SmsResponse = {
   response_code: number
@@ -79,7 +79,6 @@ class SmsServices {
       console.log('Password SMS Response:', response.data)
       return this.handleSmsResponse(response.data)
     } catch (error) {
-      console.error('Error sending Password SMS:', error)
       throw new Error('Failed to send Password via SMS')
     }
   }
@@ -95,11 +94,11 @@ class SmsServices {
           message,
         },
       })
-      console.log('Message SMS Response:', response.data)
+
       return this.handleSmsResponse(response.data)
     } catch (error) {
       console.error('Error sending Message SMS:', error)
-      throw new Error('Failed to send Message via SMS')
+      throw new ApiError(400, 'Failed to send Message via SMS')
     }
   }
   static handleSmsResponse(response: SmsResponse): string {

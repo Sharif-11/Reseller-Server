@@ -244,13 +244,11 @@ class WithdrawRequestServices {
     remarks,
     transactionId,
     transactionPhoneNo,
-    userId,
   }: {
     withdrawId: string
     remarks: string
     transactionId: string
     transactionPhoneNo: string
-    userId: string
   }) {
     const request = await prisma.withdrawRequest.findUnique({
       where: { withdrawId },
@@ -263,29 +261,37 @@ class WithdrawRequestServices {
     if (request.status !== 'pending') {
       throw new ApiError(400, 'Only pending requests can be completed.')
     }
+    const completedRequest = await prisma.$transaction(
+      async tx => {
+        try {
+          const updatedRequest = await tx.withdrawRequest.update({
+            where: { withdrawId },
+            data: {
+              status: 'completed',
+              remarks,
+              transactionId,
+              processedAt: new Date(),
+            },
+          })
 
-    const completedRequest = await prisma.$transaction(async tx => {
-      const updatedRequest = await tx.withdrawRequest.update({
-        where: { withdrawId },
-        data: {
-          status: 'completed',
-          remarks,
-          transactionId,
-          processedAt: new Date(),
-        },
-      })
-      const transaction = transactionServices.withdrawBalance({
-        tx,
-        amount: new Decimal(request.amount).toNumber(),
-        userId,
-        remarks,
-        paymentMethod: request.walletName,
-        transactionId,
-        paymentPhoneNo: transactionPhoneNo,
-      })
+          const transaction = await transactionServices.withdrawBalance({
+            tx,
+            amount: new Decimal(request.amount).toNumber(),
+            userId: request.userId,
+            remarks,
+            paymentMethod: request.walletName,
+            transactionId,
+            paymentPhoneNo: transactionPhoneNo,
+          })
 
-      return { updatedRequest, transaction }
-    })
+          return { updatedRequest, transaction }
+        } catch (error) {
+          console.error('Error during transaction:', error)
+          throw error
+        }
+      },
+      { timeout: 10000 } // Set timeout to 10 seconds (10000 ms)
+    )
   }
 }
 

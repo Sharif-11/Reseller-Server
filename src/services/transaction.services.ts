@@ -184,7 +184,10 @@ class TransactionService {
         remarks,
       },
     })
-
+    // check if transaction created successfully
+    if (!transaction) {
+      throw new ApiError(500, 'লেনদেন সফলভাবে সম্পন্ন হয়নি')
+    }
     await SmsServices.sendMessage(
       userPhoneNo,
       `${decimalAmount.toFixed(
