@@ -148,6 +148,7 @@ class WithdrawRequestController {
   async completeRequest(req: Request, res: Response, next: NextFunction) {
     try {
       const { withdrawId } = req.params
+      const phoneNo = req.user?.mobileNo as string
       const { remarks, transactionId, transactionPhoneNo } = req.body
 
       const completedRequest = await withdrawServices.completeRequest({
@@ -155,6 +156,7 @@ class WithdrawRequestController {
         remarks,
         transactionId,
         transactionPhoneNo,
+        userPhoneNo: phoneNo,
       })
 
       res.status(200).json({

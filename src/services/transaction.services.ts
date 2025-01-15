@@ -126,75 +126,77 @@ class TransactionService {
     paymentMethod: string
     remarks?: string
   }) {
-    await this.checkExistingTransactionId(tx, transactionId)
-    const decimalAmount = new Decimal(amount)
-    if (decimalAmount.isNegative()) {
-      throw new ApiError(400, 'Amount can not be negative')
-    }
+    try {
+      await this.checkExistingTransactionId(tx, transactionId)
+      const decimalAmount = new Decimal(amount)
+      if (decimalAmount.isNegative()) {
+        throw new ApiError(400, 'Amount can not be negative')
+      }
 
-    const user = await tx.user.findUnique({
-      where: { userId },
-      select: { balance: true, version: true, phoneNo: true, name: true },
-    })
+      const user = await tx.user.findUnique({
+        where: { userId },
+        select: { balance: true, version: true, phoneNo: true, name: true },
+      })
 
-    if (!user) {
-      throw new ApiError(404, 'ব্যবহারকারী পাওয়া যায়নি')
-    }
+      if (!user) {
+        throw new ApiError(404, 'ব্যবহারকারী পাওয়া যায়নি')
+      }
 
-    const {
-      phoneNo: userPhoneNo,
-      name: userName,
-      balance,
-      version: userVersion,
-    } = user
+      const {
+        phoneNo: userPhoneNo,
+        name: userName,
+        balance,
+        version: userVersion,
+      } = user
 
-    // Ensure the user has enough balance
-    const newBalance = new Decimal(balance).minus(decimalAmount)
-    if (newBalance.isNegative()) {
-      throw new ApiError(400, 'অপর্যাপ্ত ব্যালেন্স')
-    }
+      // Ensure the user has enough balance
+      const newBalance = new Decimal(balance).minus(decimalAmount)
+      if (newBalance.isNegative()) {
+        throw new ApiError(400, 'অপর্যাপ্ত ব্যালেন্স')
+      }
 
-    const updatedUser = await tx.user.updateMany({
-      where: { userId, version: userVersion },
-      data: {
-        balance: newBalance.toFixed(2),
-        version: { increment: 1 },
-      },
-    })
+      const updatedUser = await tx.user.updateMany({
+        where: { userId, version: userVersion },
+        data: {
+          balance: newBalance.toFixed(2),
+          version: { increment: 1 },
+        },
+      })
 
-    if (updatedUser.count === 0) {
+      if (updatedUser.count === 0) {
+        throw new ApiError(
+          409,
+          'ব্যবহারকারী আপডেট করা যায়নি, অনুগ্রহ করে আবার চেষ্টা করুন'
+        )
+      }
+
+      // Create the transaction record
+      const transaction = await tx.transaction.create({
+        data: {
+          amount: decimalAmount.toFixed(2),
+          userId,
+          userPhoneNo,
+          userName,
+          paymentMethod,
+          transactionId,
+          paymentPhoneNo,
+          type: 'Debit',
+          reason: 'Withdraw',
+          remarks,
+        },
+      })
+      // check if transaction created successfully
+      if (!transaction) {
+        throw new ApiError(500, 'লেনদেন সফলভাবে সম্পন্ন হয়নি')
+      }
+
+      return transaction
+    } catch (error) {
       throw new ApiError(
-        409,
-        'ব্যবহারকারী আপডেট করা যায়নি, অনুগ্রহ করে আবার চেষ্টা করুন'
+        500,
+        (error as any)?.message || 'লেনদেন সফলভাবে সম্পন্ন হয়নি'
       )
     }
-
-    // Create the transaction record
-    const transaction = await tx.transaction.create({
-      data: {
-        amount: decimalAmount.toFixed(2),
-        userId,
-        userPhoneNo,
-        userName,
-        paymentMethod,
-        transactionId,
-        paymentPhoneNo,
-        type: 'Debit',
-        reason: 'Withdraw',
-        remarks,
-      },
-    })
-    // check if transaction created successfully
-    if (!transaction) {
-      throw new ApiError(500, 'লেনদেন সফলভাবে সম্পন্ন হয়নি')
-    }
-    await SmsServices.sendMessage(
-      userPhoneNo,
-      `${decimalAmount.toFixed(
-        2
-      )} টাকা সফলভাবে আপনার ${paymentMethod} অ্যাকাউন্টে প্রেরণ করা হয়েছে। প্রেরক: ${paymentPhoneNo}। tnxId: ${transactionId}`
-    )
-    return transaction
   }
 
   async addSellCommision({

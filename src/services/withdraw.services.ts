@@ -2,6 +2,7 @@ import Decimal from 'decimal.js'
 import config from '../config'
 import ApiError from '../utils/ApiError'
 import prisma from '../utils/prisma'
+import SmsServices from './sms.services'
 import transactionServices from './transaction.services'
 
 class WithdrawRequestServices {
@@ -244,11 +245,13 @@ class WithdrawRequestServices {
     remarks,
     transactionId,
     transactionPhoneNo,
+    userPhoneNo,
   }: {
     withdrawId: string
     remarks: string
     transactionId: string
     transactionPhoneNo: string
+    userPhoneNo: string
   }) {
     const request = await prisma.withdrawRequest.findUnique({
       where: { withdrawId },
@@ -261,37 +264,59 @@ class WithdrawRequestServices {
     if (request.status !== 'pending') {
       throw new ApiError(400, 'Only pending requests can be completed.')
     }
-    const completedRequest = await prisma.$transaction(
-      async tx => {
-        try {
-          const updatedRequest = await tx.withdrawRequest.update({
-            where: { withdrawId },
-            data: {
-              status: 'completed',
+    try {
+      const completedRequest = await prisma.$transaction(
+        async tx => {
+          try {
+            const updatedRequest = await tx.withdrawRequest.update({
+              where: { withdrawId },
+              data: {
+                status: 'completed',
+                remarks,
+                transactionId,
+                processedAt: new Date(),
+              },
+            })
+
+            const transaction = await transactionServices.withdrawBalance({
+              tx,
+              amount: new Decimal(request.amount).toNumber(),
+              userId: request.userId,
               remarks,
+              paymentMethod: request.walletName,
               transactionId,
-              processedAt: new Date(),
-            },
-          })
+              paymentPhoneNo: transactionPhoneNo,
+            })
 
-          const transaction = await transactionServices.withdrawBalance({
-            tx,
-            amount: new Decimal(request.amount).toNumber(),
-            userId: request.userId,
-            remarks,
-            paymentMethod: request.walletName,
-            transactionId,
-            paymentPhoneNo: transactionPhoneNo,
-          })
-
-          return { updatedRequest, transaction }
+            return { updatedRequest, transaction }
+          } catch (error) {
+            console.error('Error during transaction:', error)
+            throw error
+          }
+        },
+        { timeout: 5000 } // Set timeout to 10 seconds (10000 ms)
+      )
+      if (completedRequest) {
+        try {
+          await SmsServices.sendMessage(
+            userPhoneNo,
+            `${new Decimal(request.amount)
+              .toNumber()
+              .toFixed(2)} টাকা সফলভাবে আপনার ${request.walletName}(${
+              request.walletPhoneNo
+            }) অ্যাকাউন্টে প্রেরণ করা হয়েছে। প্রেরক: ${transactionPhoneNo}। tnxId: ${transactionId}`
+          )
         } catch (error) {
-          console.error('Error during transaction:', error)
-          throw error
+          throw new ApiError(500, 'এসএমএস পাঠানো যায়নি')
         }
-      },
-      { timeout: 10000 } // Set timeout to 10 seconds (10000 ms)
-    )
+        return completedRequest
+      }
+    } catch (error) {
+      throw new ApiError(
+        400,
+        (error as any).message || 'Failed to complete the request.'
+      )
+    }
   }
 }
 
