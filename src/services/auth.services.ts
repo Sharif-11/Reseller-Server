@@ -165,6 +165,7 @@ class AuthServices {
       if (error instanceof ApiError) {
         throw error
       } else {
+        console.log('error', error)
         throw new ApiError(
           500,
           'কিছু একটা সমস্যা হয়েছে। দয়া করে পরে আবার চেষ্টা করুন।'
