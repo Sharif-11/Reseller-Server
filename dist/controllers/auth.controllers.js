@@ -56,12 +56,11 @@ class AuthController {
             try {
                 const sellerData = req.body;
                 const newUser = yield auth_services_1.default.createSeller(sellerData);
-                const { password } = newUser, user = __rest(newUser, ["password"]);
                 res.status(201).json({
                     statusCode: 201,
                     message: 'সেলার সফলভাবে তৈরি হয়েছে',
                     success: true,
-                    data: user,
+                    data: newUser,
                 });
             }
             catch (error) {

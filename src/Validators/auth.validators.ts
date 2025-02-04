@@ -52,8 +52,6 @@ export const validateCreateAdmin = [
     .withMessage('নমিনির ফোন নম্বরটি সঠিক নয়।'),
 ]
 
-// Validator for `createSeller`
-
 export const validateCreateSeller = [
   body('phoneNo')
     .trim()
@@ -76,11 +74,7 @@ export const validateCreateSeller = [
     .isLength({ max: 16 })
     .withMessage('পাসওয়ার্ডটি আরও ছোট হতে হবে।'),
 
-  body('email')
-    .optional({ nullable: true, checkFalsy: true })
-    .trim()
-    .isEmail()
-    .withMessage('ইমেইলটি সঠিক নয়।'),
+  body('email').optional().trim().isEmail().withMessage('ইমেইলটি সঠিক নয়।'),
 
   body('shopName')
     .trim()
@@ -111,13 +105,13 @@ export const validateCreateSeller = [
     .withMessage('ঠিকানা আরও ছোট হতে হবে।'),
 
   body('nomineePhone')
-    .optional({ nullable: true, checkFalsy: true })
+    .optional()
     .trim()
     .matches(/^01\d{9}$/)
     .withMessage('নমিনির ফোন নম্বরটি সঠিক নয়।'),
 
   body('referralCode')
-    .optional({ nullable: true, checkFalsy: true })
+    .optional()
     .trim()
     .matches(/^[a-zA-Z0-9-_]+$/)
     .withMessage(

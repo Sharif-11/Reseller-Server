@@ -53,7 +53,6 @@ exports.validateCreateAdmin = [
         .matches(/^01\d{9}$/)
         .withMessage('নমিনির ফোন নম্বরটি সঠিক নয়।'),
 ];
-// Validator for `createSeller`
 exports.validateCreateSeller = [
     (0, express_validator_1.body)('phoneNo')
         .trim()
@@ -73,11 +72,7 @@ exports.validateCreateSeller = [
         .withMessage('পাসওয়ার্ডটি কমপক্ষে ৬ অক্ষরের হতে হবে।')
         .isLength({ max: 16 })
         .withMessage('পাসওয়ার্ডটি আরও ছোট হতে হবে।'),
-    (0, express_validator_1.body)('email')
-        .optional({ nullable: true, checkFalsy: true })
-        .trim()
-        .isEmail()
-        .withMessage('ইমেইলটি সঠিক নয়।'),
+    (0, express_validator_1.body)('email').optional().trim().isEmail().withMessage('ইমেইলটি সঠিক নয়।'),
     (0, express_validator_1.body)('shopName')
         .trim()
         .notEmpty()
@@ -103,12 +98,12 @@ exports.validateCreateSeller = [
         .isLength({ max: 255 })
         .withMessage('ঠিকানা আরও ছোট হতে হবে।'),
     (0, express_validator_1.body)('nomineePhone')
-        .optional({ nullable: true, checkFalsy: true })
+        .optional()
         .trim()
         .matches(/^01\d{9}$/)
         .withMessage('নমিনির ফোন নম্বরটি সঠিক নয়।'),
     (0, express_validator_1.body)('referralCode')
-        .optional({ nullable: true, checkFalsy: true })
+        .optional()
         .trim()
         .matches(/^[a-zA-Z0-9-_]+$/)
         .withMessage('রেফারাল কোডটি শুধুমাত্র অক্ষর, সংখ্যা, (-) এবং (_) থাকতে পারে।')

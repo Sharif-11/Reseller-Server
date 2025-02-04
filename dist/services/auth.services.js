@@ -83,6 +83,7 @@ class AuthServices {
                 if (!contact.isVerified) {
                     throw new ApiError_1.default(400, 'এই ফোন নম্বরটি যাচাই করা হয়নি');
                 }
+                console.log({ email });
                 // Check if email is already in use
                 if (email) {
                     const existingUserWithEmail = yield prisma_1.default.user.findUnique({
@@ -121,6 +122,24 @@ class AuthServices {
                         address,
                         isVerified: false,
                         referredByPhone, // Store referrer's phone number if exists
+                    },
+                    select: {
+                        userId: true,
+                        phoneNo: true,
+                        name: true,
+                        email: true,
+                        shopName: true,
+                        nomineePhone: true,
+                        role: true,
+                        zilla: true,
+                        upazilla: true,
+                        address: true,
+                        isVerified: true,
+                        referralCode: true,
+                        isLocked: true,
+                        createdAt: true,
+                        updatedAt: true,
+                        balance: true,
                     },
                 });
                 return newUser;
