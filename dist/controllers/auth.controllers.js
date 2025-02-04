@@ -8,83 +8,39 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const auth_services_1 = __importDefault(require("../services/auth.services"));
-const utility_services_1 = __importDefault(require("../services/utility.services"));
+const otp_services_1 = __importDefault(require("../services/otp.services"));
+const user_services_1 = __importDefault(require("../services/user.services"));
 class AuthController {
-    sendOtp(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const { mobileNo } = req.body;
-                const result = yield auth_services_1.default.sendOtp(mobileNo);
-                res.status(200).json({
-                    statusCode: 200,
-                    success: true,
-                    message: result,
-                });
-            }
-            catch (error) {
-                next(error);
-            }
-        });
-    }
-    verifyOtp(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const { mobileNo, otp } = req.body;
-                const result = yield auth_services_1.default.verifyOtp(mobileNo, otp);
-                res.status(200).json({
-                    statusCode: 200,
-                    success: true,
-                    message: result,
-                });
-            }
-            catch (error) {
-                next(error);
-            }
-        });
-    }
-    login(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const { mobileNo, password } = req.body;
-                const result = yield auth_services_1.default.login({ mobileNo, password });
-                //set cookie
-                res.cookie('token', result.accessToken, {
-                    httpOnly: true,
-                });
-                res.status(200).json({
-                    statusCode: 200,
-                    success: true,
-                    message: 'Login successful',
-                    data: result,
-                });
-            }
-            catch (error) {
-                next(error);
-            }
-        });
-    }
+    /**
+     * Create a new Admin user
+     */
     createAdmin(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { mobileNo, password, zilla, address, name, email, } = req.body;
-                const result = yield auth_services_1.default.createAdmin({
-                    mobileNo,
-                    password,
-                    zilla,
-                    name,
-                    address,
-                    email,
-                });
+                const adminData = req.body;
+                const newUser = yield auth_services_1.default.createAdmin(adminData);
+                const { password } = newUser, user = __rest(newUser, ["password"]);
                 res.status(201).json({
                     statusCode: 201,
+                    message: 'অ্যাডমিন সফলভাবে তৈরি হয়েছে',
                     success: true,
-                    message: 'Admin created successfully',
-                    data: result,
+                    data: user,
                 });
             }
             catch (error) {
@@ -92,23 +48,45 @@ class AuthController {
             }
         });
     }
+    /**
+     * Create a new Seller user
+     */
     createSeller(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { mobileNo, password, zilla, address, name, email, } = req.body;
-                const result = yield auth_services_1.default.createSeller({
-                    mobileNo,
-                    password,
-                    zilla,
-                    name,
-                    address,
-                    email,
-                });
+                const sellerData = req.body;
+                const newUser = yield auth_services_1.default.createSeller(sellerData);
+                const { password } = newUser, user = __rest(newUser, ["password"]);
                 res.status(201).json({
                     statusCode: 201,
+                    message: 'সেলার সফলভাবে তৈরি হয়েছে',
                     success: true,
-                    message: 'Seller created successfully',
-                    data: result,
+                    data: user,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    /**
+     * Login user using phone number and password
+     */
+    loginWithPhoneNoAndPassword(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { phoneNo, password } = req.body;
+                const { user, token } = yield auth_services_1.default.loginWithPhoneNoAndPassword(phoneNo, password);
+                const { password: _ } = user, userWithoutPassword = __rest(user, ["password"]);
+                res.cookie('token', token, { httpOnly: true });
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'লগইন সফল',
+                    success: true,
+                    data: {
+                        user: userWithoutPassword,
+                        token,
+                    },
                 });
             }
             catch (error) {
@@ -122,8 +100,8 @@ class AuthController {
                 res.clearCookie('token');
                 res.status(200).json({
                     statusCode: 200,
+                    message: 'লগআউট সফল',
                     success: true,
-                    message: 'Logout successful',
                 });
             }
             catch (error) {
@@ -131,24 +109,66 @@ class AuthController {
             }
         });
     }
+    /**
+     * Send OTP for phone number verification
+     */
+    sendOtp(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { phoneNo } = req.body;
+                const data = yield otp_services_1.default.sendOtp(phoneNo);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: (data === null || data === void 0 ? void 0 : data.isVerified)
+                        ? 'এই নম্বরটি ইতিমধ্যে যাচাই করা হয়েছে'
+                        : 'OTP সফলভাবে পাঠানো হয়েছে',
+                    success: true,
+                    data,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    /**
+     * Verify OTP for phone number verification
+     */
+    verifyOtp(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { phoneNo, otp } = req.body;
+                const data = yield auth_services_1.default.verifyOtp(phoneNo, otp);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: data.otpVerified
+                        ? 'OTP সফলভাবে যাচাই করা হয়েছে'
+                        : 'এই নম্বরটি ইতিমধ্যে যাচাই করা হয়েছে',
+                    success: true,
+                    data,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    /**
+     * Update user profile information
+     */
     updateProfile(req, res, next) {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
             try {
                 const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
-                const { name, email, address, zilla } = req.body;
-                const result = yield auth_services_1.default.updateProfile(userId, {
-                    userId,
-                    name,
-                    email,
-                    address,
-                    zilla,
-                });
+                const updates = req.body;
+                const updatedUser = yield auth_services_1.default.updateProfile(userId, updates);
+                const { password } = updatedUser, user = __rest(updatedUser, ["password"]);
                 res.status(200).json({
                     statusCode: 200,
+                    message: 'প্রোফাইল সফলভাবে আপডেট করা হয়েছে',
                     success: true,
-                    message: 'Profile updated successfully',
-                    data: result,
+                    data: user,
                 });
             }
             catch (error) {
@@ -156,20 +176,89 @@ class AuthController {
             }
         });
     }
-    changePassword(req, res, next) {
+    /**
+     * Update user password
+     */
+    updatePassword(req, res, next) {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
             try {
                 const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
-                const { oldPassword, newPassword } = req.body;
-                const result = yield auth_services_1.default.changePassword(userId, {
-                    oldPassword,
-                    newPassword,
-                });
+                const { currentPassword, newPassword } = req.body;
+                const updatedUser = yield auth_services_1.default.updatePassword(userId, currentPassword, newPassword);
+                const { password } = updatedUser, user = __rest(updatedUser, ["password"]);
                 res.status(200).json({
                     statusCode: 200,
+                    message: 'পাসওয়ার্ড সফলভাবে আপডেট করা হয়েছে',
                     success: true,
-                    message: result,
+                    data: user,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    /**
+     * Add referral code for the user
+     */
+    addReferralCode(req, res, next) {
+        var _a;
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+                const { referralCode } = req.body;
+                const updatedUser = yield auth_services_1.default.addReferralCode(userId, referralCode);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'রেফারেল কোড সফলভাবে যোগ করা হয়েছে',
+                    success: true,
+                    data: updatedUser,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    /**
+     * Get a specific user by phone number
+     */
+    getUserByPhoneNo(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { phoneNo } = req.params;
+                const user = yield auth_services_1.default.getUserByPhoneNo(phoneNo);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'ব্যবহারকারী সফলভাবে পাওয়া গেছে',
+                    success: true,
+                    data: user,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    /**
+     * Get all users with optional filters
+     */
+    getAllUsers(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { phoneNo, name } = req.query;
+                const filters = {
+                    phoneNo: phoneNo ? String(phoneNo) : undefined,
+                    name: name ? String(name) : undefined,
+                };
+                const { page = 1, pageSize = 10 } = req.query;
+                const users = yield auth_services_1.default.getAllUsers(filters, Number(page), Number(pageSize));
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'সব ব্যবহারকারী সফলভাবে পাওয়া গেছে',
+                    success: true,
+                    data: users,
                 });
             }
             catch (error) {
@@ -180,14 +269,31 @@ class AuthController {
     forgotPassword(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { mobileNo } = req.body;
-                const newPassword = utility_services_1.default.generateOtp();
-                const result = yield auth_services_1.default.forgotPassword(mobileNo, newPassword);
-                yield utility_services_1.default.sendSms(mobileNo, newPassword);
+                const { phoneNo } = req.body;
+                const data = yield auth_services_1.default.forgotPassword(phoneNo);
                 res.status(200).json({
                     statusCode: 200,
+                    message: 'নতুন পাসওয়ার্ড আপনার মোবাইল নম্বরে পাঠানো হয়েছে',
                     success: true,
-                    message: result,
+                    data,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    // unlockUser controller method
+    unlockUser(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { phoneNo } = req.body;
+                const data = yield user_services_1.default.unlockUser(phoneNo);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'ব্যবহারকারী সফলভাবে আনলক করা হয়েছে',
+                    success: true,
+                    data,
                 });
             }
             catch (error) {

@@ -93,6 +93,15 @@ class AuthServices {
     if (!contact.isVerified) {
       throw new ApiError(400, 'এই ফোন নম্বরটি যাচাই করা হয়নি')
     }
+    // check if there is any user with the email
+    if (email) {
+      const existingUserWithEmail = await prisma.user.findUnique({
+        where: { email },
+      })
+      if (existingUserWithEmail) {
+        throw new ApiError(400, 'এই ইমেইলটি ইতিমধ্যেই ব্যবহৃত হয়েছে')
+      }
+    }
 
     // Hash the password
     const hashedPassword = await Utility.hashPassword(password)

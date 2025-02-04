@@ -8,306 +8,216 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __rest = (this && this.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-                t[p[i]] = s[p[i]];
-        }
-    return t;
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const config_1 = __importDefault(require("../config"));
 const ApiError_1 = __importDefault(require("../utils/ApiError"));
 const prisma_1 = __importDefault(require("../utils/prisma"));
+const contact_services_1 = __importDefault(require("./contact.services"));
+const otp_services_1 = __importDefault(require("./otp.services"));
+const user_services_1 = __importDefault(require("./user.services"));
 const utility_services_1 = __importDefault(require("./utility.services"));
-class AuthService {
-    sendOtp(mobileNo) {
+class AuthServices {
+    /**
+     * Create a new Admin user
+     * @param phoneNo - The phone number of the admin user
+     * @param name - The name of the admin
+     * @param password - The password for the admin user
+     * @returns The created admin user
+     */
+    createAdmin({ phoneNo, name, password, email, shopName, zilla, upazilla, address, nomineePhone, }) {
         return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const user = yield prisma_1.default.user.findUnique({
-                    where: {
-                        mobileNo,
-                    },
-                });
-                if (user) {
-                    throw new ApiError_1.default(400, 'User already exists');
-                }
-                const otp = utility_services_1.default.generateOtp();
-                const otpCreatedAt = new Date();
-                //check if mobile number already exists in contacts
-                const contact = yield prisma_1.default.contact.findUnique({
-                    where: {
-                        mobileNo,
-                    },
-                });
-                if (contact) {
-                    if (contact.isVerified) {
-                        return 'Mobile number already verified';
-                    }
-                    yield prisma_1.default.contact.update({
-                        where: {
-                            mobileNo,
-                        },
-                        data: {
-                            otp,
-                            otp_created_at: otpCreatedAt,
-                            isVerified: false,
-                        },
-                    });
-                }
-                else {
-                    yield prisma_1.default.contact.create({
-                        data: {
-                            mobileNo,
-                            otp,
-                            otp_created_at: otpCreatedAt,
-                            isVerified: false,
-                        },
-                    });
-                }
-                yield utility_services_1.default.sendOtp(mobileNo, otp);
-                return 'OTP sent successfully';
-            }
-            catch (error) {
-                console.error('Error sending OTP: ', error);
-                throw error;
-            }
-        });
-    }
-    verifyOtp(mobileNo, otp) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const contact = yield prisma_1.default.contact.findUnique({
-                where: {
-                    mobileNo,
-                },
+            // Check if the user exists already
+            const existingUser = yield prisma_1.default.user.findUnique({
+                where: { phoneNo },
             });
-            if (!contact) {
-                throw new ApiError_1.default(400, 'Mobile number not found');
+            if (existingUser) {
+                throw new ApiError_1.default(400, 'এই ফোন নম্বরটি ইতিমধ্যেই ব্যবহৃত হয়েছে');
             }
-            if (contact.isVerified) {
-                return 'Mobile number already verified';
-            }
-            if (contact.otp !== otp) {
-                throw new ApiError_1.default(400, 'Invalid OTP');
-            }
-            //check if OTP is expired
-            const otpCreatedAt = contact.otp_created_at;
-            const currentTime = new Date();
-            const diff = currentTime.getTime() - otpCreatedAt.getTime();
-            if (diff > config_1.default.otpExpiresIn) {
-                throw new ApiError_1.default(400, 'OTP expired');
-            }
-            const result = yield prisma_1.default.contact.update({
-                where: {
-                    mobileNo,
-                },
+            // Create the Admin user
+            const hashedPassword = yield utility_services_1.default.hashPassword(password);
+            const newUser = yield prisma_1.default.user.create({
                 data: {
-                    isVerified: true,
+                    phoneNo,
+                    name,
+                    email,
+                    shopName,
+                    nomineePhone,
+                    role: 'Admin',
+                    password: hashedPassword,
+                    zilla,
+                    upazilla,
+                    address,
+                    isVerified: true, // Admins are verified by default
                 },
             });
-            return 'OTP verified successfully';
+            return newUser;
         });
     }
-    createAdmin(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ mobileNo, password, name, zilla, address, email, }) {
-            try {
-                const user = yield prisma_1.default.user.findUnique({
-                    where: {
-                        mobileNo,
-                    },
-                });
-                if (user) {
-                    throw new ApiError_1.default(400, 'User already exists');
-                }
-                //check if mobile number is verified
-                const contact = yield prisma_1.default.contact.findUnique({
-                    where: {
-                        mobileNo,
-                    },
-                });
-                if (!contact || !contact.isVerified) {
-                    throw new ApiError_1.default(400, 'Mobile number is not verified');
-                }
-                const hashedPassword = yield utility_services_1.default.hashPassword(password);
-                const admin = yield prisma_1.default.user.create({
-                    data: {
-                        mobileNo,
-                        password: hashedPassword,
-                        role: 'Admin',
-                        name,
-                        zilla,
-                        address,
-                        email,
-                    },
-                });
-                const { password: _ } = admin, adminWithoutPassword = __rest(admin, ["password"]);
-                return adminWithoutPassword;
-            }
-            catch (error) {
-                throw error;
-            }
-        });
-    }
-    createSeller(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ mobileNo, password, name, zilla, address, email, }) {
-            try {
-                const user = yield prisma_1.default.user.findUnique({
-                    where: {
-                        mobileNo,
-                    },
-                });
-                if (user) {
-                    throw new ApiError_1.default(400, 'User already exists');
-                }
-                //check if mobile number is verified
-                const contact = yield prisma_1.default.contact.findUnique({
-                    where: {
-                        mobileNo,
-                    },
-                });
-                if (!contact || !contact.isVerified) {
-                    throw new ApiError_1.default(400, 'Mobile number is not verified');
-                }
-                const hashedPassword = yield utility_services_1.default.hashPassword(password);
-                const seller = yield prisma_1.default.user.create({
-                    data: {
-                        mobileNo,
-                        password: hashedPassword,
-                        role: 'Seller',
-                        name,
-                        zilla,
-                        address,
-                        email,
-                    },
-                });
-                const { password: _ } = seller, sellerWithoutPassword = __rest(seller, ["password"]);
-                return sellerWithoutPassword;
-            }
-            catch (error) {
-                throw error;
-            }
-        });
-    }
-    login(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ mobileNo, password }) {
-            try {
-                const user = yield prisma_1.default.user.findUnique({
-                    where: {
-                        mobileNo,
-                    },
-                });
-                if (!user) {
-                    throw new ApiError_1.default(400, 'User not found');
-                }
-                const isPasswordMatch = yield utility_services_1.default.comparePassword(password, user.password);
-                if (!isPasswordMatch) {
-                    throw new ApiError_1.default(400, 'Invalid password');
-                }
-                const accessToken = utility_services_1.default.generateAccessToken(user.userId, user.role, user.mobileNo);
-                const { password: _ } = user, userWithoutPassword = __rest(user, ["password"]);
-                return { user: userWithoutPassword, accessToken };
-            }
-            catch (error) {
-                console.error('Error logging in: ', error);
-                throw error;
-            }
-        });
-    }
-    updateProfile(userId_1, _a) {
-        return __awaiter(this, arguments, void 0, function* (userId, { name, address, email, zilla, shopName, }) {
-            try {
-                const user = yield prisma_1.default.user.findUnique({
-                    where: {
-                        userId,
-                    },
-                });
-                if (!user) {
-                    throw new ApiError_1.default(400, 'User not found');
-                }
-                const updatedUser = yield prisma_1.default.user.update({
-                    where: {
-                        userId,
-                    },
-                    data: {
-                        name,
-                        address,
-                        email,
-                        zilla,
-                        shopName,
-                    },
-                });
-                const { password: _ } = updatedUser, userWithoutPassword = __rest(updatedUser, ["password"]);
-                return userWithoutPassword;
-            }
-            catch (error) {
-                throw error;
-            }
-        });
-    }
-    changePassword(userId_1, _a) {
-        return __awaiter(this, arguments, void 0, function* (userId, { oldPassword, newPassword }) {
-            try {
-                const user = yield prisma_1.default.user.findUnique({
-                    where: {
-                        userId,
-                    },
-                });
-                if (!user) {
-                    throw new ApiError_1.default(400, 'User not found');
-                }
-                const isPasswordMatch = yield utility_services_1.default.comparePassword(oldPassword, user.password);
-                if (!isPasswordMatch) {
-                    throw new ApiError_1.default(400, 'Invalid password');
-                }
-                const hashedPassword = yield utility_services_1.default.hashPassword(newPassword);
-                yield prisma_1.default.user.update({
-                    where: {
-                        userId,
-                    },
-                    data: {
-                        password: hashedPassword,
-                    },
-                });
-                return 'Password changed successfully';
-            }
-            catch (error) {
-                throw error;
-            }
-        });
-    }
-    forgotPassword(mobileNo, newPassword) {
+    /**
+     * Create a new Seller user
+     * @param phoneNo - The phone number of the seller user
+     * @param name - The name of the seller
+     * @param password - The password for the seller user
+     * @param email - The optional email of the seller
+     * @param shopName - The shop name of the seller
+     * @param nomineePhone - The optional nominee phone number of the seller
+     * @returns The created seller user
+     */
+    createSeller({ phoneNo, name, password, email, shopName, zilla, upazilla, address, nomineePhone, }) {
         return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const user = yield prisma_1.default.user.findUnique({
-                    where: {
-                        mobileNo,
-                    },
-                });
-                if (!user) {
-                    throw new ApiError_1.default(400, 'User not found');
-                }
-                const hashedPassword = yield utility_services_1.default.hashPassword(newPassword);
-                yield prisma_1.default.user.update({
-                    where: {
-                        mobileNo,
-                    },
-                    data: {
-                        password: hashedPassword,
-                    },
-                });
-                return 'Password changed successfully';
+            // Check if the user exists already
+            const existingUser = yield prisma_1.default.user.findUnique({
+                where: { phoneNo },
+            });
+            if (existingUser) {
+                throw new ApiError_1.default(400, 'এই ফোন নম্বরটি ইতিমধ্যেই ব্যবহৃত হয়েছে');
             }
-            catch (error) {
-                throw error;
+            // Check if contact exists and is verified
+            const contact = yield contact_services_1.default.getContactByPhoneNo(phoneNo);
+            if (!contact) {
+                throw new ApiError_1.default(400, 'এই ফোন নম্বরটি পাওয়া যায়নি');
             }
+            if (!contact.isVerified) {
+                throw new ApiError_1.default(400, 'এই ফোন নম্বরটি যাচাই করা হয়নি');
+            }
+            // Hash the password
+            const hashedPassword = yield utility_services_1.default.hashPassword(password);
+            // Create the seller user
+            const newUser = yield prisma_1.default.user.create({
+                data: {
+                    phoneNo,
+                    name,
+                    email,
+                    shopName,
+                    nomineePhone,
+                    role: 'Seller',
+                    password: hashedPassword,
+                    zilla,
+                    upazilla,
+                    address,
+                    isVerified: false,
+                },
+            });
+            return newUser;
+        });
+    }
+    /**
+     * Login using phone number and password
+     * @param phoneNo - The phone number of the user
+     * @param password - The password of the user
+     * @returns The logged-in user and access token
+     */
+    loginWithPhoneNoAndPassword(phoneNo, password) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_services_1.default.getUserByPhoneNo(phoneNo);
+            // Compare passwords
+            const isPasswordValid = yield utility_services_1.default.comparePassword(password, user.password);
+            if (!isPasswordValid) {
+                throw new ApiError_1.default(400, 'পাসওয়ার্ড সঠিক নয়');
+            }
+            // Generate access token
+            const token = utility_services_1.default.generateAccessToken(user.userId, user.role, user.phoneNo);
+            return { user, token };
+        });
+    }
+    /**
+     * Send OTP to the phone number for verification
+     * @param phoneNo - The phone number to send the OTP to
+     * @returns The OTP sending status
+     */
+    sendOtp(phoneNo) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return otp_services_1.default.sendOtp(phoneNo);
+        });
+    }
+    /**
+     * Verify OTP for the phone number
+     * @param phoneNo - The phone number to verify
+     * @param otp - The OTP to verify
+     * @returns OTP verification status
+     */
+    verifyOtp(phoneNo, otp) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return otp_services_1.default.verifyOtp(phoneNo, otp);
+        });
+    }
+    /**
+     * Update user profile information
+     * @param userId - The user ID of the user
+     * @param updates - The fields to be updated
+     * @returns The updated user object
+     */
+    updateProfile(userId, updates) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return user_services_1.default.updateProfile(userId, updates);
+        });
+    }
+    /**
+     * Update user password
+     * @param userId - The user ID of the user
+     * @param currentPassword - The current password of the user
+     * @param newPassword - The new password
+     * @returns The updated user object
+     */
+    updatePassword(userId, currentPassword, newPassword) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Check if the user exists
+            console.log({ userId, currentPassword, newPassword });
+            const user = yield user_services_1.default.getUserByUserId(userId);
+            console.log({ user });
+            // Compare current password
+            const isPasswordValid = yield utility_services_1.default.comparePassword(currentPassword, user.password);
+            console.log({ isPasswordValid });
+            if (!isPasswordValid) {
+                throw new ApiError_1.default(400, 'বর্তমান পাসওয়ার্ড সঠিক নয়');
+            }
+            // Hash new password
+            const hashedPassword = yield utility_services_1.default.hashPassword(newPassword);
+            // Update password
+            return user_services_1.default.updatePassword(userId, hashedPassword);
+        });
+    }
+    /**
+     * Add referral code for the user
+     * @param userId - The user ID of the user
+     * @param referralCode - The referral code to be added
+     * @returns The updated user with referral code
+     */
+    addReferralCode(userId, referralCode) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return user_services_1.default.addReferralCode(userId, referralCode);
+        });
+    }
+    /**
+     * Get a specific user by phone number
+     * @param phoneNo - The phone number of the user
+     * @returns The user object
+     */
+    getUserByPhoneNo(phoneNo) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return user_services_1.default.getUserByPhoneNo(phoneNo);
+        });
+    }
+    /**
+     * Get all users
+     * @returns The list of all users
+     */
+    getAllUsers(filters = {}, page, pageSize) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return user_services_1.default.getAllUsers(filters, page, pageSize);
+        });
+    }
+    /**
+     * Handle Forgot Password
+     * @param phoneNo - The phone number of the user requesting the password reset
+     * @returns A status message indicating the result
+     */
+    forgotPassword(phoneNo) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield user_services_1.default.forgotPassword(phoneNo);
         });
     }
 }
-exports.default = new AuthService();
+exports.default = new AuthServices();
