@@ -1,22 +1,22 @@
-import express from 'express'
-import TransactionController from '../controllers/transaction.controller'
-import validateRequest from '../middlewares/validation.middleware'
-import { addDepositValidation } from '../Validators/deposit.validators'
+// import express from 'express'
+// import TransactionController from '../controllers/transaction.controller'
+// import validateRequest from '../middlewares/validation.middleware'
+// import { addDepositValidation } from '../Validators/deposit.validators'
 
-const transactionRouters = express.Router()
+// const transactionRouters = express.Router()
 
-// Add Deposit
-transactionRouters.post(
-  '/deposit/:userId',
-  addDepositValidation,
-  validateRequest,
-  TransactionController.addDeposit
-)
+// // Add Deposit
+// transactionRouters.post(
+//   '/deposit/:userId',
+//   addDepositValidation,
+//   validateRequest,
+//   TransactionController.addDeposit
+// )
 
-// Withdraw Balance
-transactionRouters.post(
-  '/withdraw-balance',
-  TransactionController.withdrawBalance
-)
+// // Withdraw Balance
+// transactionRouters.post(
+//   '/withdraw-balance',
+//   TransactionController.withdrawBalance
+// )
 
-export default transactionRouters
+// export default transactionRouters
