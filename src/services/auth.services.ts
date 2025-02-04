@@ -94,7 +94,7 @@ class AuthServices {
       if (!contact.isVerified) {
         throw new ApiError(400, 'এই ফোন নম্বরটি যাচাই করা হয়নি')
       }
-      console.log({ email })
+
       // Check if email is already in use
       if (email) {
         const existingUserWithEmail = await prisma.user.findUnique({
