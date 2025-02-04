@@ -19,8 +19,8 @@ class WithdrawRequestController {
      * Create a new withdraw request
      */
     createRequest(req, res, next) {
-        var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
             try {
                 const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
                 const userPhoneNo = (_b = req.user) === null || _b === void 0 ? void 0 : _b.mobileNo;
@@ -58,8 +58,8 @@ class WithdrawRequestController {
      * Get all withdrawal requests for a user with optional pagination and filtering by status
      */
     getUserRequests(req, res, next) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
                 const { status, page, pageSize } = req.query;
@@ -150,8 +150,8 @@ class WithdrawRequestController {
      * Complete a withdrawal request
      */
     completeRequest(req, res, next) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const { withdrawId } = req.params;
                 const phoneNo = (_a = req.user) === null || _a === void 0 ? void 0 : _a.mobileNo;

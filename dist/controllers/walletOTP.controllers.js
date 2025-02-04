@@ -18,8 +18,8 @@ class WalletOtpController {
      * Send an OTP to a phone number
      */
     sendOtp(req, res, next) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const { phoneNo } = req.body;
                 const userPhoneNo = (_a = req.user) === null || _a === void 0 ? void 0 : _a.mobileNo;

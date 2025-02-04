@@ -98,7 +98,7 @@ class CommissionService {
             const commissionEntries = this.createCommissionEntries(data);
             // Transaction to replace the existing table
             yield prisma_1.default.$transaction([
-                prisma_1.default.commission.deleteMany(),
+                prisma_1.default.commission.deleteMany(), // Delete all existing rows
                 prisma_1.default.commission.createMany({
                     data: commissionEntries,
                     skipDuplicates: false, // Ensure all rows are inserted

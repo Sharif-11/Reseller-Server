@@ -18,8 +18,8 @@ class WalletController {
      * Add a new wallet for a user
      */
     addWallet(req, res, next) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
                 console.log({ userId });
@@ -45,8 +45,8 @@ class WalletController {
      * Get all wallets of a specific user
      */
     getWallets(req, res, next) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
                 const wallets = yield wallet_services_1.default.getWallets(userId);

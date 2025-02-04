@@ -157,8 +157,8 @@ class AuthController {
      * Update user profile information
      */
     updateProfile(req, res, next) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
                 const updates = req.body;
@@ -180,8 +180,8 @@ class AuthController {
      * Update user password
      */
     updatePassword(req, res, next) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
                 const { currentPassword, newPassword } = req.body;
@@ -203,8 +203,8 @@ class AuthController {
      * Add referral code for the user
      */
     addReferralCode(req, res, next) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
                 const { referralCode } = req.body;

@@ -26,8 +26,8 @@ class AuthServices {
      * @param password - The password for the admin user
      * @returns The created admin user
      */
-    createAdmin({ phoneNo, name, password, email, shopName, zilla, upazilla, address, nomineePhone, }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    createAdmin(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ phoneNo, name, password, email, shopName, zilla, upazilla, address, nomineePhone, }) {
             // Check if the user exists already
             const existingUser = yield prisma_1.default.user.findUnique({
                 where: { phoneNo },
@@ -65,42 +65,74 @@ class AuthServices {
      * @param nomineePhone - The optional nominee phone number of the seller
      * @returns The created seller user
      */
-    createSeller({ phoneNo, name, password, email, shopName, zilla, upazilla, address, nomineePhone, }) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // Check if the user exists already
-            const existingUser = yield prisma_1.default.user.findUnique({
-                where: { phoneNo },
-            });
-            if (existingUser) {
-                throw new ApiError_1.default(400, 'এই ফোন নম্বরটি ইতিমধ্যেই ব্যবহৃত হয়েছে');
+    createSeller(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ phoneNo, name, password, email, shopName, zilla, upazilla, address, nomineePhone, referralCode, }) {
+            try {
+                // Check if phone number already exists
+                const existingUser = yield prisma_1.default.user.findUnique({
+                    where: { phoneNo },
+                });
+                if (existingUser) {
+                    throw new ApiError_1.default(400, 'এই ফোন নম্বরটি ইতিমধ্যেই ব্যবহৃত হয়েছে');
+                }
+                // Check if contact exists and is verified
+                const contact = yield contact_services_1.default.getContactByPhoneNo(phoneNo);
+                if (!contact) {
+                    throw new ApiError_1.default(400, 'এই ফোন নম্বরটি পাওয়া যায়নি');
+                }
+                if (!contact.isVerified) {
+                    throw new ApiError_1.default(400, 'এই ফোন নম্বরটি যাচাই করা হয়নি');
+                }
+                // Check if email is already in use
+                if (email) {
+                    const existingUserWithEmail = yield prisma_1.default.user.findUnique({
+                        where: { email },
+                    });
+                    if (existingUserWithEmail) {
+                        throw new ApiError_1.default(400, 'এই ইমেইলটি ইতিমধ্যেই ব্যবহৃত হয়েছে');
+                    }
+                }
+                let referredByPhone = null;
+                // Handle referral code (if provided)
+                if (referralCode) {
+                    const referrer = yield prisma_1.default.user.findUnique({
+                        where: { referralCode },
+                        select: { phoneNo: true }, // Only fetch phone number
+                    });
+                    if (!referrer) {
+                        throw new ApiError_1.default(400, 'এই রেফারেল কোডটি সঠিক নয়');
+                    }
+                    referredByPhone = referrer.phoneNo;
+                }
+                // Hash the password before storing
+                const hashedPassword = yield utility_services_1.default.hashPassword(password);
+                // Create the seller using an atomic transaction
+                const newUser = yield prisma_1.default.user.create({
+                    data: {
+                        phoneNo,
+                        name,
+                        email,
+                        shopName,
+                        nomineePhone,
+                        role: 'Seller',
+                        password: hashedPassword,
+                        zilla,
+                        upazilla,
+                        address,
+                        isVerified: false,
+                        referredByPhone, // Store referrer's phone number if exists
+                    },
+                });
+                return newUser;
             }
-            // Check if contact exists and is verified
-            const contact = yield contact_services_1.default.getContactByPhoneNo(phoneNo);
-            if (!contact) {
-                throw new ApiError_1.default(400, 'এই ফোন নম্বরটি পাওয়া যায়নি');
+            catch (error) {
+                if (error instanceof ApiError_1.default) {
+                    throw error;
+                }
+                else {
+                    throw new ApiError_1.default(500, 'কিছু একটা সমস্যা হয়েছে। দয়া করে পরে আবার চেষ্টা করুন।');
+                }
             }
-            if (!contact.isVerified) {
-                throw new ApiError_1.default(400, 'এই ফোন নম্বরটি যাচাই করা হয়নি');
-            }
-            // Hash the password
-            const hashedPassword = yield utility_services_1.default.hashPassword(password);
-            // Create the seller user
-            const newUser = yield prisma_1.default.user.create({
-                data: {
-                    phoneNo,
-                    name,
-                    email,
-                    shopName,
-                    nomineePhone,
-                    role: 'Seller',
-                    password: hashedPassword,
-                    zilla,
-                    upazilla,
-                    address,
-                    isVerified: false,
-                },
-            });
-            return newUser;
         });
     }
     /**
@@ -204,8 +236,8 @@ class AuthServices {
      * Get all users
      * @returns The list of all users
      */
-    getAllUsers(filters = {}, page, pageSize) {
-        return __awaiter(this, void 0, void 0, function* () {
+    getAllUsers() {
+        return __awaiter(this, arguments, void 0, function* (filters = {}, page, pageSize) {
             return user_services_1.default.getAllUsers(filters, page, pageSize);
         });
     }

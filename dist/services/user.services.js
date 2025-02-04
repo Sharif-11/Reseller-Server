@@ -156,8 +156,8 @@ class UserServices {
      * @param role - The role of the user (Admin or Seller)
      * @returns The created user object
      */
-    createUser({ phoneNo, name, zilla, upazilla, address, password, email, shopName, nomineePhone, role, }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    createUser(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ phoneNo, name, zilla, upazilla, address, password, email, shopName, nomineePhone, role, }) {
             // Check if contact exists and is verified
             const contact = yield contact_services_1.default.getContactByPhoneNo(phoneNo);
             if (!contact) {
@@ -192,7 +192,7 @@ class UserServices {
                     email,
                     shopName,
                     nomineePhone,
-                    role: role || 'Seller',
+                    role: role || 'Seller', // Default role is 'Seller'
                     isVerified: false, // Default to false for safety
                 },
             });
@@ -308,8 +308,8 @@ class UserServices {
      * @param pageSize - The number of users per page (optional)
      * @returns The list of users that match the filters
      */
-    getAllUsers(filters = {}, page, pageSize) {
-        return __awaiter(this, void 0, void 0, function* () {
+    getAllUsers() {
+        return __awaiter(this, arguments, void 0, function* (filters = {}, page, pageSize) {
             const query = {
                 where: {
                     phoneNo: filters.phoneNo ? { contains: filters.phoneNo } : undefined,

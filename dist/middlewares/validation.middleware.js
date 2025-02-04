@@ -7,7 +7,7 @@ const validateRequest = (req, res, next) => {
         const firstError = errors.array()[0]; // Get the first error from the array
         return res.status(400).json({
             statusCode: 400,
-            message: firstError.msg,
+            message: firstError.msg, // Use the first error's message
             success: false,
         });
     }

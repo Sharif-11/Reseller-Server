@@ -75,55 +75,84 @@ class AuthServices {
     upazilla,
     address,
     nomineePhone,
+    referralCode,
   }: Prisma.UserCreateInput) {
-    // Check if the user exists already
-    const existingUser = await prisma.user.findUnique({
-      where: { phoneNo },
-    })
-
-    if (existingUser) {
-      throw new ApiError(400, 'এই ফোন নম্বরটি ইতিমধ্যেই ব্যবহৃত হয়েছে')
-    }
-
-    // Check if contact exists and is verified
-    const contact = await contactServices.getContactByPhoneNo(phoneNo)
-    if (!contact) {
-      throw new ApiError(400, 'এই ফোন নম্বরটি পাওয়া যায়নি')
-    }
-    if (!contact.isVerified) {
-      throw new ApiError(400, 'এই ফোন নম্বরটি যাচাই করা হয়নি')
-    }
-    // check if there is any user with the email
-    if (email) {
-      const existingUserWithEmail = await prisma.user.findUnique({
-        where: { email },
+    try {
+      // Check if phone number already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { phoneNo },
       })
-      if (existingUserWithEmail) {
-        throw new ApiError(400, 'এই ইমেইলটি ইতিমধ্যেই ব্যবহৃত হয়েছে')
+      if (existingUser) {
+        throw new ApiError(400, 'এই ফোন নম্বরটি ইতিমধ্যেই ব্যবহৃত হয়েছে')
+      }
+
+      // Check if contact exists and is verified
+      const contact = await contactServices.getContactByPhoneNo(phoneNo)
+      if (!contact) {
+        throw new ApiError(400, 'এই ফোন নম্বরটি পাওয়া যায়নি')
+      }
+      if (!contact.isVerified) {
+        throw new ApiError(400, 'এই ফোন নম্বরটি যাচাই করা হয়নি')
+      }
+
+      // Check if email is already in use
+      if (email) {
+        const existingUserWithEmail = await prisma.user.findUnique({
+          where: { email },
+        })
+        if (existingUserWithEmail) {
+          throw new ApiError(400, 'এই ইমেইলটি ইতিমধ্যেই ব্যবহৃত হয়েছে')
+        }
+      }
+
+      let referredByPhone: string | null = null
+
+      // Handle referral code (if provided)
+      if (referralCode) {
+        const referrer = await prisma.user.findUnique({
+          where: { referralCode },
+          select: { phoneNo: true }, // Only fetch phone number
+        })
+
+        if (!referrer) {
+          throw new ApiError(400, 'এই রেফারেল কোডটি সঠিক নয়')
+        }
+
+        referredByPhone = referrer.phoneNo
+      }
+
+      // Hash the password before storing
+      const hashedPassword = await Utility.hashPassword(password)
+
+      // Create the seller using an atomic transaction
+      const newUser = await prisma.user.create({
+        data: {
+          phoneNo,
+          name,
+          email,
+          shopName,
+          nomineePhone,
+          role: 'Seller',
+          password: hashedPassword,
+          zilla,
+          upazilla,
+          address,
+          isVerified: false,
+          referredByPhone, // Store referrer's phone number if exists
+        },
+      })
+
+      return newUser
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error
+      } else {
+        throw new ApiError(
+          500,
+          'কিছু একটা সমস্যা হয়েছে। দয়া করে পরে আবার চেষ্টা করুন।'
+        )
       }
     }
-
-    // Hash the password
-    const hashedPassword = await Utility.hashPassword(password)
-
-    // Create the seller user
-    const newUser = await prisma.user.create({
-      data: {
-        phoneNo,
-        name,
-        email,
-        shopName,
-        nomineePhone,
-        role: 'Seller',
-        password: hashedPassword,
-        zilla,
-        upazilla,
-        address,
-        isVerified: false,
-      },
-    })
-
-    return newUser
   }
 
   /**

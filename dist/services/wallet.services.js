@@ -19,8 +19,8 @@ const user_services_1 = __importDefault(require("./user.services"));
 const walletContact_services_1 = __importDefault(require("./walletContact.services"));
 class WalletService {
     // create a add wallet method to add a new wallet
-    addWallet({ userId, walletName, walletPhoneNo, }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    addWallet(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ userId, walletName, walletPhoneNo, }) {
             const user = yield user_services_1.default.getUserByUserId(String(userId));
             if (!user) {
                 throw new ApiError_1.default(404, 'User not found');

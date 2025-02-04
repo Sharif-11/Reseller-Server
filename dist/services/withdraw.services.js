@@ -31,8 +31,8 @@ class WithdrawRequestServices {
      * @param {string} [data.remarks] - Optional remarks
      * @returns {Object} - The created withdraw request
      */
-    createRequest({ userId, userPhoneNo, userName, amount, walletName, walletPhoneNo, remarks, }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    createRequest(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ userId, userPhoneNo, userName, amount, walletName, walletPhoneNo, remarks, }) {
             const decimalAmount = new decimal_js_1.default(amount);
             if (decimalAmount.isNaN() || decimalAmount.isNegative()) {
                 throw new ApiError_1.default(400, 'Invalid amount.');
@@ -99,8 +99,8 @@ class WithdrawRequestServices {
      * @param {number} [pageSize=10] - Number of items per page
      * @returns {Object} - List of withdraw requests with pagination info
      */
-    getUserRequests({ userId, status, page = 1, pageSize = 10, }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    getUserRequests(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ userId, status, page = 1, pageSize = 10, }) {
             const skip = (page - 1) * pageSize;
             const filter = {
                 userId,
@@ -155,8 +155,8 @@ class WithdrawRequestServices {
         });
     }
     // get all withdraw requests with optional pagination, filter by status, and sorted by most recent requests
-    getAllRequests({ status, page = 1, pageSize = 10, }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    getAllRequests(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ status, page = 1, pageSize = 10, }) {
             const skip = (page - 1) * pageSize;
             const [requests, totalRequests] = yield Promise.all([
                 prisma_1.default.withdrawRequest.findMany({
@@ -211,8 +211,8 @@ class WithdrawRequestServices {
         });
     }
     // method to complete a withdraw request
-    completeRequest({ withdrawId, remarks, transactionId, transactionPhoneNo, userPhoneNo, }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    completeRequest(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ withdrawId, remarks, transactionId, transactionPhoneNo, userPhoneNo, }) {
             const request = yield prisma_1.default.withdrawRequest.findUnique({
                 where: { withdrawId },
             });

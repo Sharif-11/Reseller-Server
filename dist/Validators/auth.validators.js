@@ -54,7 +54,67 @@ exports.validateCreateAdmin = [
         .withMessage('নমিনির ফোন নম্বরটি সঠিক নয়।'),
 ];
 // Validator for `createSeller`
-exports.validateCreateSeller = [...exports.validateCreateAdmin];
+exports.validateCreateSeller = [
+    (0, express_validator_1.body)('phoneNo')
+        .trim()
+        .notEmpty()
+        .withMessage('ফোন নম্বর প্রয়োজন।')
+        .matches(/^01\d{9}$/)
+        .withMessage('ফোন নম্বরটি সঠিক নয়।'),
+    (0, express_validator_1.body)('name')
+        .trim()
+        .isLength({ max: 48 })
+        .withMessage('নামটি আরও ছোট হতে হবে।'),
+    (0, express_validator_1.body)('password')
+        .trim()
+        .notEmpty()
+        .withMessage('পাসওয়ার্ড প্রয়োজন।')
+        .isLength({ min: 6 })
+        .withMessage('পাসওয়ার্ডটি কমপক্ষে ৬ অক্ষরের হতে হবে।')
+        .isLength({ max: 16 })
+        .withMessage('পাসওয়ার্ডটি আরও ছোট হতে হবে।'),
+    (0, express_validator_1.body)('email')
+        .optional({ nullable: true, checkFalsy: true })
+        .trim()
+        .isEmail()
+        .withMessage('ইমেইলটি সঠিক নয়।'),
+    (0, express_validator_1.body)('shopName')
+        .trim()
+        .notEmpty()
+        .withMessage('দোকানের নাম প্রয়োজন।')
+        .isLength({ max: 32 })
+        .withMessage('দোকানের নাম আরও ছোট হতে হবে।'),
+    (0, express_validator_1.body)('zilla')
+        .trim()
+        .notEmpty()
+        .withMessage('জেলার নাম প্রয়োজন।')
+        .isLength({ max: 48 })
+        .withMessage('জেলার নাম আরও ছোট হতে হবে।'),
+    (0, express_validator_1.body)('upazilla')
+        .trim()
+        .notEmpty()
+        .withMessage('উপজেলার নাম প্রয়োজন।')
+        .isLength({ max: 48 })
+        .withMessage('উপজেলার নাম আরও ছোট হতে হবে।'),
+    (0, express_validator_1.body)('address')
+        .trim()
+        .notEmpty()
+        .withMessage('ঠিকানা প্রয়োজন।')
+        .isLength({ max: 255 })
+        .withMessage('ঠিকানা আরও ছোট হতে হবে।'),
+    (0, express_validator_1.body)('nomineePhone')
+        .optional({ nullable: true, checkFalsy: true })
+        .trim()
+        .matches(/^01\d{9}$/)
+        .withMessage('নমিনির ফোন নম্বরটি সঠিক নয়।'),
+    (0, express_validator_1.body)('referralCode')
+        .optional({ nullable: true, checkFalsy: true })
+        .trim()
+        .matches(/^[a-zA-Z0-9-_]+$/)
+        .withMessage('রেফারাল কোডটি শুধুমাত্র অক্ষর, সংখ্যা, (-) এবং (_) থাকতে পারে।')
+        .isLength({ max: 16, min: 3 })
+        .withMessage('রেফারাল কোডটি ৩ থেকে ১৬ অক্ষরের মধ্যে হতে হবে।'),
+];
 // Validator for `loginWithPhoneNoAndPassword`
 exports.validateLoginWithPhoneNoAndPassword = [
     (0, express_validator_1.body)('phoneNo')

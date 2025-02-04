@@ -38,8 +38,8 @@ class TransactionService {
      * @returns {Promise<Object>} The transaction object created.
      * @throws {ApiError} If the amount is negative, the user does not exist, or any other error occurs during the transaction.
      */
-    addDeposit({ tx, amount, userId, paymentMethod, transactionId, paymentPhoneNo, }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    addDeposit(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ tx, amount, userId, paymentMethod, transactionId, paymentPhoneNo, }) {
             yield this.checkExistingTransactionId(tx, transactionId);
             const decimalAmount = new decimal_js_1.default(amount);
             if (decimalAmount.isNegative()) {
@@ -85,8 +85,8 @@ class TransactionService {
             return transaction;
         });
     }
-    withdrawBalance({ tx, amount, userId, transactionId, paymentPhoneNo, paymentMethod, remarks, }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    withdrawBalance(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ tx, amount, userId, transactionId, paymentPhoneNo, paymentMethod, remarks, }) {
             try {
                 yield this.checkExistingTransactionId(tx, transactionId);
                 const decimalAmount = new decimal_js_1.default(amount);
@@ -142,8 +142,8 @@ class TransactionService {
             }
         });
     }
-    addSellCommision({ tx, amount, userId, }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    addSellCommision(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ tx, amount, userId, }) {
             const decimalAmount = new decimal_js_1.default(amount);
             if (decimalAmount.isNegative()) {
                 throw new ApiError_1.default(400, 'Amount can not be negative');
@@ -184,8 +184,8 @@ class TransactionService {
             return transaction;
         });
     }
-    addTeamCommision({ tx, amount, userId, reference, referralLevel, }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    addTeamCommision(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ tx, amount, userId, reference, referralLevel, }) {
             const decimalAmount = new decimal_js_1.default(amount);
             if (decimalAmount.isNegative()) {
                 throw new ApiError_1.default(400, 'Amount can not be negative');
@@ -229,8 +229,8 @@ class TransactionService {
             return transaction;
         });
     }
-    deductDeliveryCharge({ tx, amount, userId, remarks, }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    deductDeliveryCharge(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ tx, amount, userId, remarks, }) {
             const decimalAmount = new decimal_js_1.default(amount);
             if (decimalAmount.isNegative()) {
                 throw new ApiError_1.default(400, 'Amount can not be negative');
@@ -273,8 +273,8 @@ class TransactionService {
             yield sms_services_1.default.sendMessage(userPhoneNo, `আপনার অর্ডার করা পণ্যটি ফেরত দেওয়া হয়েছে। ডেলিভারি চার্জ হিসেবে আপনার অ্যাকাউন্ট থেকে ${decimalAmount.toFixed(2)} টাকা কাটা হয়েছে। tnxId: ${transaction.transactionId}`);
         });
     }
-    deductSmsChargeForForgotPassword({ tx, amount, userId, remarks, }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    deductSmsChargeForForgotPassword(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ tx, amount, userId, remarks, }) {
             const decimalAmount = new decimal_js_1.default(amount);
             if (decimalAmount.isNegative()) {
                 throw new ApiError_1.default(400, 'Amount can not be negative');

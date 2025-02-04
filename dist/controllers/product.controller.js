@@ -165,8 +165,8 @@ class ProductController {
      * Add product review
      */
     addReview(req, res, next) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const { productId } = req.params;
                 const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
@@ -211,8 +211,8 @@ class ProductController {
         });
     }
     getAllProducts(req, res, next) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const { name, category, minPrice, maxPrice, page, pageSize } = req.query;
                 // Prepare filters with proper types
@@ -239,8 +239,8 @@ class ProductController {
         });
     }
     getProduct(req, res, next) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const { productId } = req.params;
                 const role = (_a = req === null || req === void 0 ? void 0 : req.user) === null || _a === void 0 ? void 0 : _a.role;
