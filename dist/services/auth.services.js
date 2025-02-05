@@ -173,6 +173,15 @@ class AuthServices {
             return { user, token };
         });
     }
+    checkIfAlreadyLoggedIn(userId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const user = yield user_services_1.default.getUserByUserId(userId);
+            if (!user) {
+                throw new ApiError_1.default(404, 'ব্যবহারকারী খুঁজে পাওয়া যায়নি');
+            }
+            return user;
+        });
+    }
     /**
      * Send OTP to the phone number for verification
      * @param phoneNo - The phone number to send the OTP to

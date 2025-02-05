@@ -18,4 +18,5 @@ authRouter.post('/create-seller', auth_validators_1.validateCreateSeller, valida
 authRouter.patch('/change-password', auth_middlewares_1.isAuthenticated, auth_validators_1.validateChangePassword, validation_middleware_1.default, auth_controllers_1.default.updatePassword);
 authRouter.patch('/update-profile', auth_middlewares_1.isAuthenticated, auth_validators_1.validateUpdateProfile, validation_middleware_1.default, auth_controllers_1.default.updateProfile);
 authRouter.post('/forgot-password', auth_validators_1.validateForgotPassword, validation_middleware_1.default, auth_controllers_1.default.forgotPassword);
+authRouter.get('/verify-login', auth_middlewares_1.isAuthenticated, auth_controllers_1.default.checkIfAlreadyLoggedIn);
 exports.default = authRouter;

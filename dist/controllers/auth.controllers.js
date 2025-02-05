@@ -68,6 +68,27 @@ class AuthController {
             }
         });
     }
+    checkIfAlreadyLoggedIn(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const userId = (_a = req === null || req === void 0 ? void 0 : req.user) === null || _a === void 0 ? void 0 : _a.userId;
+                const user = yield auth_services_1.default.checkIfAlreadyLoggedIn(userId);
+                const { password, referredByPhone } = user, userWithoutPassword = __rest(user, ["password", "referredByPhone"]);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'already logged in',
+                    success: true,
+                    data: {
+                        user: userWithoutPassword,
+                    },
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
     /**
      * Login user using phone number and password
      */
@@ -76,7 +97,7 @@ class AuthController {
             try {
                 const { phoneNo, password } = req.body;
                 const { user, token } = yield auth_services_1.default.loginWithPhoneNoAndPassword(phoneNo, password);
-                const { password: _ } = user, userWithoutPassword = __rest(user, ["password"]);
+                const { password: _, referredByPhone: __ } = user, userWithoutPassword = __rest(user, ["password", "referredByPhone"]);
                 res.cookie('token', token, { httpOnly: true });
                 res.status(200).json({
                     statusCode: 200,
