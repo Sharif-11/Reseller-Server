@@ -24,7 +24,7 @@ class AuthServices {
     upazilla,
     address,
     nomineePhone,
-  }: Prisma.UserCreateInput) {
+  }: Prisma.UserUncheckedCreateInput) {
     // Check if the user exists already
     const existingUser = await prisma.user.findUnique({
       where: { phoneNo },
@@ -168,7 +168,7 @@ class AuthServices {
         console.log('error', error)
         throw new ApiError(
           500,
-          'কিছু একটা সমস্যা হয়েছে। দয়া করে পরে আবার চেষ্টা করুন।'
+          'কিছু একটা সমস্যা হয়েছে। দয়া করে পরে আবার চেষ্টা করুন।',
         )
       }
     }
@@ -186,7 +186,7 @@ class AuthServices {
     // Compare passwords
     const isPasswordValid = await Utility.comparePassword(
       password,
-      user.password
+      user.password,
     )
     if (!isPasswordValid) {
       throw new ApiError(400, 'পাসওয়ার্ড সঠিক নয়')
@@ -196,7 +196,7 @@ class AuthServices {
     const token = Utility.generateAccessToken(
       user.userId,
       user.role,
-      user.phoneNo
+      user.phoneNo,
     )
 
     return { user, token }
@@ -241,7 +241,7 @@ class AuthServices {
   async updatePassword(
     userId: string,
     currentPassword: string,
-    newPassword: string
+    newPassword: string,
   ) {
     // Check if the user exists
     console.log({ userId, currentPassword, newPassword })
@@ -250,7 +250,7 @@ class AuthServices {
     // Compare current password
     const isPasswordValid = await Utility.comparePassword(
       currentPassword,
-      user.password
+      user.password,
     )
     console.log({ isPasswordValid })
     if (!isPasswordValid) {
@@ -290,7 +290,7 @@ class AuthServices {
   async getAllUsers(
     filters: { phoneNo?: string; name?: string } = {},
     page?: number,
-    pageSize?: number
+    pageSize?: number,
   ) {
     return userServices.getAllUsers(filters, page, pageSize)
   }

@@ -148,6 +148,7 @@ class AuthServices {
                     throw error;
                 }
                 else {
+                    console.log('error', error);
                     throw new ApiError_1.default(500, 'কিছু একটা সমস্যা হয়েছে। দয়া করে পরে আবার চেষ্টা করুন।');
                 }
             }
