@@ -201,6 +201,14 @@ class AuthServices {
 
     return { user, token }
   }
+  async checkIfAlreadyLoggedIn(userId: string) {
+    const user = await userServices.getUserByUserId(userId)
+
+    if (!user) {
+      throw new ApiError(404, 'ব্যবহারকারী খুঁজে পাওয়া যায়নি')
+    }
+    return user
+  }
 
   /**
    * Send OTP to the phone number for verification

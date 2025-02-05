@@ -64,5 +64,10 @@ authRouter.post(
   validateRequest,
   authControllers.forgotPassword,
 )
+authRouter.get(
+  '/verify-login',
+  isAuthenticated,
+  authControllers.checkIfAlreadyLoggedIn,
+)
 
 export default authRouter
