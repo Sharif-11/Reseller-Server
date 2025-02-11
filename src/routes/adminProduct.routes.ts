@@ -2,7 +2,6 @@ import { Router } from 'express'
 import productController from '../controllers/product.controller'
 import validateRequest from '../middlewares/validation.middleware'
 import {
-  addImagesValidator,
   addProductMetaValidator,
   addReviewValidator,
   deleteImageValidator,
@@ -29,8 +28,8 @@ productRouter.patch(
 )
 productRouter.post(
   '/:productId/images',
-  addImagesValidator,
-  validateRequest,
+  // addImagesValidator,
+  // validateRequest,
   productController.addImages,
 )
 productRouter.post(

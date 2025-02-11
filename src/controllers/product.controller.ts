@@ -53,7 +53,7 @@ class ProductController {
       const { images } = req.body // Assume `images` is an array of URLs or image IDs
       const updatedProduct = await productServices.addProductImages(
         Number(productId),
-        images
+        images,
       )
       res.status(200).json({
         statusCode: 200,
@@ -75,7 +75,7 @@ class ProductController {
       const { quantity } = req.body
       const updatedProduct = await productServices.removeProductQuantity(
         Number(productId),
-        quantity
+        quantity,
       )
       res.status(200).json({
         statusCode: 200,
@@ -116,7 +116,7 @@ class ProductController {
       console.log(meta)
       const updatedProduct = await productServices.addProductMeta(
         +productId,
-        meta
+        meta,
       )
       res.status(200).json({
         statusCode: 200,
@@ -138,7 +138,7 @@ class ProductController {
       const { meta } = req.body
       const updatedProduct = await productServices.updateProductMeta(
         +productId,
-        meta
+        meta,
       )
       res.status(200).json({
         statusCode: 200,
@@ -189,7 +189,7 @@ class ProductController {
       const { productId, imageId } = req.params
       const updatedProduct = await productServices.deleteImage(
         +productId,
-        +imageId
+        +imageId,
       )
       res.status(200).json({
         statusCode: 200,
@@ -218,7 +218,7 @@ class ProductController {
       // Call the service
       const result = await productServices.getAllProducts(
         filters,
-        req.user?.role == 'Admin' ? undefined : true
+        req.user?.role == 'Admin' ? undefined : true,
       )
 
       res.status(200).json({
