@@ -280,6 +280,7 @@ class ProductService {
         name: true,
         imageUrl: true,
         basePrice: true,
+        productId: true,
       },
       orderBy: {
         createdAt: 'desc', // Most recently added at the top
