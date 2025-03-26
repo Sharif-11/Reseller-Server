@@ -149,6 +149,45 @@ class ProductController {
       next(error)
     }
   }
+  async createOrUpdateProductMeta(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const { productId } = req.params
+      const { meta } = req.body
+      const updatedProduct = await productServices.createOrUpdateProductMeta(
+        +productId,
+        meta,
+      )
+      res.status(200).json({
+        statusCode: 200,
+        message: 'পণ্যের মেটা তথ্য সফলভাবে যোগ করা হয়েছে',
+        success: true,
+        data: updatedProduct,
+      })
+    }
+    catch (error) {
+      next(error)
+    }
+  }
+  async getProductMeta(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { productId } = req.params
+      const productMeta = await productServices.getMeta(+productId)
+      res.status(200).json({
+        statusCode: 200,
+        message: 'পণ্যের মেটা তথ্য সফলভাবে পেয়েছেন',
+        success: true,
+        data: productMeta,
+      })
+    }
+    catch (error) {
+      next(error)
+    }
+  }
+
 
   /**
    * Add product review

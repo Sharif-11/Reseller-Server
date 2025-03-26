@@ -38,11 +38,17 @@ productRouter.post(
   validateRequest,
   productController.publishProduct,
 )
-productRouter.post(
+productRouter.put(
   '/:productId/meta',
   // addProductMetaValidator,
   // validateRequest,
-  productController.addProductMeta,
+  productController.createOrUpdateProductMeta,
+)
+productRouter.get(
+  '/:productId/meta',
+  // productIdValidatorParams,
+  // validateRequest,
+  productController.getProductMeta,
 )
 productRouter.patch(
   '/:productId/info',

@@ -581,6 +581,57 @@ class ProductService {
     await this.imageService.deleteImage(imageId)
     return this.getProduct(product.productId)
   }
+  async createOrUpdateProductMeta(
+    productId: number,
+    metaEntries: { key: string; value: string }[]
+  ) {
+    // Check if the product exists
+    const product = await prisma.product.findUnique({
+      where: { productId },
+    });
+
+    if (!product) {
+      throw new ApiError(404, 'পণ্য পাওয়া যায়নি।');
+    }
+
+    // Use transaction to ensure atomic operation
+    const result = await prisma.$transaction(async prisma => {
+      // First delete all existing meta entries for this product
+      await prisma.productMeta.deleteMany({
+        where: { productId },
+      });
+
+      // Then create new meta entries
+      const newMetaData = metaEntries.map(entry => ({
+        productId,
+        key: entry.key,
+        value: entry.value,
+      }));
+
+      return await prisma.productMeta.createMany({
+        data: newMetaData,
+      });
+    });
+
+    return this.getProduct(product.productId);
+  }
+  async getMeta(productId: number) {
+    try {
+      const metaData = await prisma.productMeta.findMany({
+        where: {
+          productId,
+        },
+        select: {
+          key: true,
+          value: true,
+        },
+      });
+
+      return metaData;
+    } catch (error) {
+      throw new ApiError(500, 'মেটা ডেটা লোড করতে ব্যর্থ। আবার চেষ্টা করুন।');
+    }
+  }
 }
 
 export default new ProductService()
