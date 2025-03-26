@@ -65,6 +65,21 @@ class ProductController {
       next(error)
     }
   }
+  async getProductImages(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { productId } = req.params
+      const images = await productServices.getProductImages(+productId)
+      res.status(200).json({
+        statusCode: 200,
+        message: 'পণ্যের ছবি সফলভাবে পেয়েছেন',
+        success: true,
+        data: images,
+      })
+    }
+    catch (error) {
+      next(error)
+    }
+  }
 
   /**
    * Remove some quantities from a product

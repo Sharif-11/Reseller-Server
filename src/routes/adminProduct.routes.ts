@@ -32,6 +32,7 @@ productRouter.post(
   // validateRequest,
   productController.addImages,
 )
+productRouter.get('/:productId/images', productController.getProductImages)
 productRouter.post(
   '/:productId/publish',
   // productIdValidatorParams,

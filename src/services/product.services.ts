@@ -31,6 +31,22 @@ class ProductImageService {
       throw new ApiError(500, 'ছবি আপলোড করতে ব্যর্থ। আবার চেষ্টা করুন।')
     }
   }
+  async getImages(productId: number) {
+    try {
+      return await prisma.productImage.findMany({
+        where: {
+          productId,
+        },
+        select: {
+          imageId: true,
+          imageUrl: true,
+        },
+      })
+    }
+    catch (error) {
+      throw new ApiError(500, 'পণ্যের ছবি লোড করতে ব্যর্থ। আবার চেষ্টা করুন।')
+    }
+  }
 
   /**
    * Delete a specific image of a specific product
@@ -66,6 +82,7 @@ class ProductImageService {
       throw new ApiError(500, 'সব ছবি মুছতে ব্যর্থ। আবার চেষ্টা করুন।')
     }
   }
+
 }
 class ProductMetaService {
   // Method to add new meta information
@@ -456,6 +473,19 @@ class ProductService {
 
     return this.getProduct(product.productId)
   }
+  async getProductImages(productId: number) {
+    // Check if the product exists
+    const product = await prisma.product.findUnique({
+      where: { productId },
+    })
+
+    if (!product) {
+      throw new ApiError(404, 'পণ্য পাওয়া যায়নি।')
+    }
+
+    return this.imageService.getImages(productId)
+  }
+
 
   /**
    * Remove a product by decreasing its stock size
@@ -512,6 +542,7 @@ class ProductService {
     await this.metaService.addMeta(productId, metaEntries)
     return this.getProduct(product.productId)
   }
+ 
   /**
    * Add a review to a product
    * @param productId - ID of the product
