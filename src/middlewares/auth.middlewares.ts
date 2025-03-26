@@ -12,12 +12,12 @@ export const isAuthenticated = async (
   next: NextFunction
 ) => {
   const token = req.header('Authorization')?.replace('Bearer ', '')
+  // console.log({meta:req?.body?.meta})
   if (!token) {
     return next(new ApiError(401, 'Unauthorized'))
   }
   try {
     const payload = jwt.verify(token, config.jwtSecret as string)
-    console.log({ payload })
     // check if user with userId exists
     const { userId } = payload as any
     const user = await prisma.user.findUnique({

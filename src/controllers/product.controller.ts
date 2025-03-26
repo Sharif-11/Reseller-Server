@@ -113,7 +113,6 @@ class ProductController {
     try {
       const { productId } = req.params
       const { meta } = req.body
-      console.log(meta)
       const updatedProduct = await productServices.addProductMeta(
         +productId,
         meta,

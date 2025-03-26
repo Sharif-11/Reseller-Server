@@ -39,9 +39,9 @@ productRouter.post(
   productController.publishProduct,
 )
 productRouter.post(
-  '/:productId/info',
-  addProductMetaValidator,
-  validateRequest,
+  '/:productId/meta',
+  // addProductMetaValidator,
+  // validateRequest,
   productController.addProductMeta,
 )
 productRouter.patch(
