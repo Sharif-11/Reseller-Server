@@ -281,6 +281,7 @@ class ProductService {
         imageUrl: true,
         basePrice: true,
         productId: true,
+        published: true,
       },
       orderBy: {
         createdAt: 'desc', // Most recently added at the top
@@ -396,6 +397,29 @@ class ProductService {
       const updatedProduct = await prisma.product.update({
         where: { productId },
         data: { published: true },
+      })
+
+      return updatedProduct
+    } catch (error) {
+      console.error('Error publishing product:', error)
+      throw new ApiError(500, 'পণ্য প্রকাশ করতে ব্যর্থ। আবার চেষ্টা করুন।')
+    }
+  }
+  async unpublishProduct(productId: number) {
+    // Check if the product exists
+    const product = await prisma.product.findUnique({
+      where: { productId },
+    })
+
+    if (!product) {
+      throw new ApiError(404, 'পণ্য পাওয়া যায়নি।')
+    }
+
+    try {
+      // Update the product to set it as published
+      const updatedProduct = await prisma.product.update({
+        where: { productId },
+        data: { published: false },
       })
 
       return updatedProduct

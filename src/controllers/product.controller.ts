@@ -106,6 +106,24 @@ class ProductController {
     }
   }
 
+  async unpublishProduct(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { productId } = req.params
+      const unpublishedProduct = await productServices.unpublishProduct(
+        +productId,
+      )
+      res.status(200).json({
+        statusCode: 200,
+        message: 'পণ্য সফলভাবে অপ্রকাশিত হয়েছে',
+        success: true,
+        data: unpublishedProduct,
+      })
+    }
+    catch (error) {
+      next(error)
+    }
+  }
+
   /**
    * Add product meta information
    */

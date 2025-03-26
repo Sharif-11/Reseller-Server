@@ -34,9 +34,15 @@ productRouter.post(
 )
 productRouter.post(
   '/:productId/publish',
-  productIdValidatorParams,
-  validateRequest,
+  // productIdValidatorParams,
+  // validateRequest,
   productController.publishProduct,
+)
+productRouter.post(
+  '/:productId/unpublish',
+  // productIdValidatorParams,
+  // validateRequest,
+  productController.unpublishProduct,
 )
 productRouter.put(
   '/:productId/meta',
