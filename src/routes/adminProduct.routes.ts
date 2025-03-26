@@ -22,8 +22,8 @@ productRouter.get(
 )
 productRouter.patch(
   '/:productId',
-  updateProductValidator,
-  validateRequest,
+  // updateProductValidator,
+  // validateRequest,
   productController.updateProduct,
 )
 productRouter.post(

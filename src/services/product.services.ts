@@ -282,6 +282,15 @@ class ProductService {
         basePrice: true,
         productId: true,
         published: true,
+        category: true,
+        stockSize: true,
+        suggestedMaxPrice: true,
+        description: true,
+        location: true,
+        deliveryChargeInside: true,
+        deliveryChargeOutside: true,
+        videoUrl: true,
+        
       },
       orderBy: {
         createdAt: 'desc', // Most recently added at the top
