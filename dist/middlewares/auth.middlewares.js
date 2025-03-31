@@ -21,12 +21,12 @@ const prisma_1 = __importDefault(require("../utils/prisma"));
 const isAuthenticated = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     const token = (_a = req.header('Authorization')) === null || _a === void 0 ? void 0 : _a.replace('Bearer ', '');
+    // console.log({meta:req?.body?.meta})
     if (!token) {
         return next(new ApiError_1.default(401, 'Unauthorized'));
     }
     try {
         const payload = jsonwebtoken_1.default.verify(token, config_1.default.jwtSecret);
-        console.log({ payload });
         // check if user with userId exists
         const { userId } = payload;
         const user = yield prisma_1.default.user.findUnique({

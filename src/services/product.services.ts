@@ -307,6 +307,19 @@ class ProductService {
         deliveryChargeInside: true,
         deliveryChargeOutside: true,
         videoUrl: true,
+        images:{
+          select: {
+            imageId: true,
+            imageUrl: true,
+          },
+        },
+        metas: {
+          select: {
+            key: true,
+            value: true,
+          },
+        },
+        
         
       },
       orderBy: {

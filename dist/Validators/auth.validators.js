@@ -203,7 +203,9 @@ exports.validateAddReferralCode = [
         .notEmpty()
         .withMessage('রেফারাল কোড প্রয়োজন।')
         .isLength({ max: 32 })
-        .withMessage('রেফারাল কোড আরও ছোট হতে হবে।'),
+        .withMessage('রেফারাল কোড আরও ছোট হতে হবে।')
+        .matches(/^[a-zA-Z0-9._-]+$/)
+        .withMessage('শুধুমাত্র অক্ষর, সংখ্যা, হাইফেন (-), আন্ডারস্কোর (_), এবং ডট (.) অনুমোদিত।'),
 ];
 // Validator for `getUserByPhoneNo`
 exports.validateGetUserByPhoneNo = [

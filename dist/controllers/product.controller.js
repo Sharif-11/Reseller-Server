@@ -77,6 +77,23 @@ class ProductController {
             }
         });
     }
+    getProductImages(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { productId } = req.params;
+                const images = yield product_services_1.default.getProductImages(+productId);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'পণ্যের ছবি সফলভাবে পেয়েছেন',
+                    success: true,
+                    data: images,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
     /**
      * Remove some quantities from a product
      */
@@ -118,6 +135,23 @@ class ProductController {
             }
         });
     }
+    unpublishProduct(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { productId } = req.params;
+                const unpublishedProduct = yield product_services_1.default.unpublishProduct(+productId);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'পণ্য সফলভাবে অপ্রকাশিত হয়েছে',
+                    success: true,
+                    data: unpublishedProduct,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
     /**
      * Add product meta information
      */
@@ -126,7 +160,6 @@ class ProductController {
             try {
                 const { productId } = req.params;
                 const { meta } = req.body;
-                console.log(meta);
                 const updatedProduct = yield product_services_1.default.addProductMeta(+productId, meta);
                 res.status(200).json({
                     statusCode: 200,
@@ -154,6 +187,41 @@ class ProductController {
                     message: 'পণ্যের মেটা তথ্য সফলভাবে আপডেট করা হয়েছে',
                     success: true,
                     data: updatedProduct,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    createOrUpdateProductMeta(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { productId } = req.params;
+                const { meta } = req.body;
+                const updatedProduct = yield product_services_1.default.createOrUpdateProductMeta(+productId, meta);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'পণ্যের মেটা তথ্য সফলভাবে যোগ করা হয়েছে',
+                    success: true,
+                    data: updatedProduct,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    getProductMeta(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { productId } = req.params;
+                const productMeta = yield product_services_1.default.getMeta(+productId);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'পণ্যের মেটা তথ্য সফলভাবে পেয়েছেন',
+                    success: true,
+                    data: productMeta,
                 });
             }
             catch (error) {

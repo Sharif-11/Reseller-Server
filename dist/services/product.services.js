@@ -37,6 +37,24 @@ class ProductImageService {
             }
         });
     }
+    getImages(productId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                return yield prisma_1.default.productImage.findMany({
+                    where: {
+                        productId,
+                    },
+                    select: {
+                        imageId: true,
+                        imageUrl: true,
+                    },
+                });
+            }
+            catch (error) {
+                throw new ApiError_1.default(500, 'পণ্যের ছবি লোড করতে ব্যর্থ। আবার চেষ্টা করুন।');
+            }
+        });
+    }
     /**
      * Delete a specific image of a specific product
      * @param productId - ID of the product
@@ -246,6 +264,28 @@ class ProductService {
                     name: true,
                     imageUrl: true,
                     basePrice: true,
+                    productId: true,
+                    published: true,
+                    category: true,
+                    stockSize: true,
+                    suggestedMaxPrice: true,
+                    description: true,
+                    location: true,
+                    deliveryChargeInside: true,
+                    deliveryChargeOutside: true,
+                    videoUrl: true,
+                    images: {
+                        select: {
+                            imageId: true,
+                            imageUrl: true,
+                        },
+                    },
+                    metas: {
+                        select: {
+                            key: true,
+                            value: true,
+                        },
+                    },
                 }, orderBy: {
                     createdAt: 'desc', // Most recently added at the top
                 } }, (skip !== undefined && take !== undefined ? { skip, take } : {})));
@@ -333,6 +373,29 @@ class ProductService {
             }
         });
     }
+    unpublishProduct(productId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Check if the product exists
+            const product = yield prisma_1.default.product.findUnique({
+                where: { productId },
+            });
+            if (!product) {
+                throw new ApiError_1.default(404, 'পণ্য পাওয়া যায়নি।');
+            }
+            try {
+                // Update the product to set it as published
+                const updatedProduct = yield prisma_1.default.product.update({
+                    where: { productId },
+                    data: { published: false },
+                });
+                return updatedProduct;
+            }
+            catch (error) {
+                console.error('Error publishing product:', error);
+                throw new ApiError_1.default(500, 'পণ্য প্রকাশ করতে ব্যর্থ। আবার চেষ্টা করুন।');
+            }
+        });
+    }
     /**
      * Add a list of images to the product
      * @param productId - ID of the product to add images
@@ -349,6 +412,18 @@ class ProductService {
             }
             yield this.imageService.addImages(productId, imageUrls);
             return this.getProduct(product.productId);
+        });
+    }
+    getProductImages(productId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Check if the product exists
+            const product = yield prisma_1.default.product.findUnique({
+                where: { productId },
+            });
+            if (!product) {
+                throw new ApiError_1.default(404, 'পণ্য পাওয়া যায়নি।');
+            }
+            return this.imageService.getImages(productId);
         });
     }
     /**
@@ -477,6 +552,53 @@ class ProductService {
             }
             yield this.imageService.deleteImage(imageId);
             return this.getProduct(product.productId);
+        });
+    }
+    createOrUpdateProductMeta(productId, metaEntries) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Check if the product exists
+            const product = yield prisma_1.default.product.findUnique({
+                where: { productId },
+            });
+            if (!product) {
+                throw new ApiError_1.default(404, 'পণ্য পাওয়া যায়নি।');
+            }
+            // Use transaction to ensure atomic operation
+            const result = yield prisma_1.default.$transaction((prisma) => __awaiter(this, void 0, void 0, function* () {
+                // First delete all existing meta entries for this product
+                yield prisma.productMeta.deleteMany({
+                    where: { productId },
+                });
+                // Then create new meta entries
+                const newMetaData = metaEntries.map(entry => ({
+                    productId,
+                    key: entry.key,
+                    value: entry.value,
+                }));
+                return yield prisma.productMeta.createMany({
+                    data: newMetaData,
+                });
+            }));
+            return this.getProduct(product.productId);
+        });
+    }
+    getMeta(productId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const metaData = yield prisma_1.default.productMeta.findMany({
+                    where: {
+                        productId,
+                    },
+                    select: {
+                        key: true,
+                        value: true,
+                    },
+                });
+                return metaData;
+            }
+            catch (error) {
+                throw new ApiError_1.default(500, 'মেটা ডেটা লোড করতে ব্যর্থ। আবার চেষ্টা করুন।');
+            }
         });
     }
 }
