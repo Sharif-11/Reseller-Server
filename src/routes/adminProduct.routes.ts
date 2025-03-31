@@ -71,8 +71,8 @@ productRouter.post(
 )
 productRouter.delete(
   '/:productId/images/:imageId',
-  deleteImageValidator,
-  validateRequest,
+  // deleteImageValidator,
+  // validateRequest,
   productController.deleteImage,
 )
 export default productRouter
