@@ -302,6 +302,7 @@ class ProductService {
         category: true,
         stockSize: true,
         suggestedMaxPrice: true,
+        isVerifiedProduct: true,
         description: true,
         location: true,
         deliveryChargeInside: true,
