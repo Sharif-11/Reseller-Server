@@ -18,6 +18,7 @@ const ApiError_1 = __importDefault(require("../utils/ApiError"));
 const prisma_1 = __importDefault(require("../utils/prisma"));
 const sms_services_1 = __importDefault(require("./sms.services"));
 const transaction_services_1 = __importDefault(require("./transaction.services"));
+const withdraw_utils_1 = require("../utils/withdraw.utils");
 class WithdrawRequestServices {
     /**
      * Create a new withdraw request
@@ -76,6 +77,11 @@ class WithdrawRequestServices {
             if (existingRequest) {
                 throw new ApiError_1.default(400, 'You already have a pending withdrawal request.');
             }
+            const { actualAmount, transactionFee } = (0, withdraw_utils_1.calculateWithdrawal)({
+                walletName,
+                walletPhoneNo,
+                amount: decimalAmount.toNumber(),
+            });
             // Create a new request
             const newRequest = yield prisma_1.default.withdrawRequest.create({
                 data: {
@@ -86,6 +92,8 @@ class WithdrawRequestServices {
                     walletName,
                     walletPhoneNo,
                     remarks,
+                    actualAmount,
+                    transactionFee,
                 },
             });
             return newRequest;

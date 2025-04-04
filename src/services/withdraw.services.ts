@@ -4,6 +4,8 @@ import ApiError from '../utils/ApiError'
 import prisma from '../utils/prisma'
 import SmsServices from './sms.services'
 import transactionServices from './transaction.services'
+import { calculateWithdrawal } from '../utils/withdraw.utils'
+import { WalletName } from '../types/withdraw.types'
 
 class WithdrawRequestServices {
   /**
@@ -31,7 +33,7 @@ class WithdrawRequestServices {
     userPhoneNo: string
     userName: string
     amount: number
-    walletName: string
+    walletName: WalletName
     walletPhoneNo: string
     remarks?: string
   }) {
@@ -79,7 +81,11 @@ class WithdrawRequestServices {
     if (existingRequest) {
       throw new ApiError(400, 'You already have a pending withdrawal request.')
     }
-
+    const {actualAmount, transactionFee} = calculateWithdrawal({
+      walletName,
+      walletPhoneNo,
+      amount: decimalAmount.toNumber(),
+    })
     // Create a new request
     const newRequest = await prisma.withdrawRequest.create({
       data: {
@@ -90,6 +96,8 @@ class WithdrawRequestServices {
         walletName,
         walletPhoneNo,
         remarks,
+        actualAmount,
+        transactionFee,
       },
     })
 

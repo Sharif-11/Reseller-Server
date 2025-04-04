@@ -197,6 +197,8 @@ model WithdrawRequest {
   userPhoneNo        String
   userName           String
   amount             Decimal        @db.Decimal(15, 2)
+  actualAmount        Decimal        @db.Decimal(15, 2)
+  transactionFee    Decimal        @db.Decimal(15, 2)
   walletName         String
   walletPhoneNo      String
   transactionId      String?
