@@ -88,8 +88,8 @@ const withdrawValidators = {
       .isString()
       .withMessage('Transaction ID must be a string.'),
     body('transactionPhoneNo')
-      .notEmpty()
-      .withMessage('Transaction phone number is required.')
+    .optional()
+      .trim()
       .matches(/^01\d{9}$/)
       .withMessage(
         'Transaction phone number must be in the format 01XXXXXXXXX.'

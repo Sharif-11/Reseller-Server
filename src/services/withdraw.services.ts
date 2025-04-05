@@ -259,7 +259,7 @@ class WithdrawRequestServices {
     withdrawId: string
     remarks: string
     transactionId: string
-    transactionPhoneNo: string
+    transactionPhoneNo?: string
     userPhoneNo: string
   }) {
     const request = await prisma.withdrawRequest.findUnique({

@@ -122,7 +122,7 @@ class TransactionService {
     amount: number
     userId: string
     transactionId: string
-    paymentPhoneNo: string
+    paymentPhoneNo?: string
     paymentMethod: string
     remarks?: string
   }) {
