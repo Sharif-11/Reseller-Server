@@ -152,6 +152,7 @@ class WithdrawRequestServices {
       requests,
       totalRequests,
       currentPage: page,
+      pageSize,
       totalPages: Math.ceil(totalRequests / pageSize),
     }
   }
