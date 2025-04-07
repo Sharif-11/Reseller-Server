@@ -52,13 +52,20 @@ class TransactionService {
         });
     }
     getAllTransactionForAdmin(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ page = 1, pageSize = 10, }) {
+        return __awaiter(this, arguments, void 0, function* ({ phoneNo, page = 1, pageSize = 10, }) {
             const transactions = prisma_1.default.transaction.findMany({
+                where: {
+                    userPhoneNo: phoneNo ? { contains: phoneNo } : undefined,
+                },
                 orderBy: { createdAt: 'desc' },
                 take: pageSize,
                 skip: (page - 1) * pageSize,
             });
-            const totalTransactions = prisma_1.default.transaction.count();
+            const totalTransactions = prisma_1.default.transaction.count({
+                where: {
+                    userPhoneNo: phoneNo ? { contains: phoneNo } : undefined,
+                },
+            });
             const [transactionList, total] = yield Promise.all([
                 transactions,
                 totalTransactions,

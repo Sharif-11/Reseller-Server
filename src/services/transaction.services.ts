@@ -49,18 +49,28 @@ class TransactionService {
 
   }
   async getAllTransactionForAdmin({
+    phoneNo,
     page = 1,
     pageSize = 10,
+
   }: {
+    phoneNo?: string
     page?: number
     pageSize?: number
   }) {
     const transactions =  prisma.transaction.findMany({
+      where: {
+        userPhoneNo: phoneNo ? { contains: phoneNo } : undefined,
+      },
       orderBy: { createdAt: 'desc' },
       take: pageSize,
       skip: (page - 1) * pageSize,
     })
-    const totalTransactions =  prisma.transaction.count()
+    const totalTransactions =  prisma.transaction.count({
+      where: {
+        userPhoneNo: phoneNo ? { contains: phoneNo } : undefined,
+      },
+    })
     const [transactionList, total] = await Promise.all([
       transactions,
       totalTransactions,

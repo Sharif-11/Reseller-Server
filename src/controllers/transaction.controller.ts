@@ -94,9 +94,9 @@ async getAllTransactionForAdmin(
         next: NextFunction
     ) {
         try {
-            const {page,pageSize} = req.query
+            const {page,pageSize,phoneNo} = req.query
             const transactions = await transactionServices.getAllTransactionForAdmin(
-                {
+                {   phoneNo:phoneNo as string,
                     page: Number(page) || 1,
                     pageSize: Number(pageSize) || 10
                 }

@@ -97,11 +97,10 @@ class TransactionController {
     getAllTransactionForAdmin(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { page, pageSize } = req.query;
-                const transactions = yield transaction_services_1.default.getAllTransactionForAdmin({
+                const { page, pageSize, phoneNo } = req.query;
+                const transactions = yield transaction_services_1.default.getAllTransactionForAdmin({ phoneNo: phoneNo,
                     page: Number(page) || 1,
-                    pageSize: Number(pageSize) || 10
-                });
+                    pageSize: Number(pageSize) || 10 });
                 res.status(200).json({
                     statusCode: 200,
                     message: 'Transactions fetched successfully',
