@@ -268,7 +268,8 @@ class WithdrawRequestServices {
                             .toFixed(2)} টাকা সফলভাবে আপনার ${request.walletName}(${request.walletPhoneNo}) অ্যাকাউন্টে প্রেরণ করা হয়েছে। প্রেরক: ${transactionPhoneNo}। tnxId: ${transactionId}`);
                     }
                     catch (error) {
-                        throw new ApiError_1.default(500, 'এসএমএস পাঠানো যায়নি');
+                        // throw new ApiError(500, 'এসএমএস পাঠানো যায়নি')
+                        console.error('Error sending SMS:', error);
                     }
                     return completedRequest;
                 }

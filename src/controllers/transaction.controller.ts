@@ -1,5 +1,6 @@
-// import { NextFunction, Request, Response } from 'express'
-// import transactionServices from '../services/transaction.services'
+import { NextFunction, Request, Response } from 'express'
+import transactionServices from '../services/transaction.services'
+import { User } from '@prisma/client'
 
 // class TransactionController {
 //   /**
@@ -57,3 +58,58 @@
 // }
 
 // export default new TransactionController()
+
+class TransactionController {
+    /**
+     * Add deposit to user's account
+     */
+   async getTransactionOfUser(
+        req: Request,
+        res: Response,
+        next: NextFunction
+    ) {
+        try {
+            const  userId  = req.user?.userId as string
+            const {page,pageSize} = req.query
+            const transactions = await transactionServices.getTransactionOfUser(
+               {
+                userId,
+                page: Number(page) || 1,
+                pageSize: Number(pageSize) || 10
+               }
+            )
+            res.status(200).json({
+                statusCode: 200,
+                message: 'Transactions fetched successfully',
+                success: true,
+                data: transactions,
+            })
+        } catch (error) {
+            next(error)
+        }
+    }
+async getAllTransactionForAdmin(
+        req: Request,   
+        res: Response,
+        next: NextFunction
+    ) {
+        try {
+            const {page,pageSize} = req.query
+            const transactions = await transactionServices.getAllTransactionForAdmin(
+                {
+                    page: Number(page) || 1,
+                    pageSize: Number(pageSize) || 10
+                }
+            )
+            res.status(200).json({
+                statusCode: 200,
+                message: 'Transactions fetched successfully',
+                success: true,
+                data: transactions,
+            })
+        } catch (error) {
+            next(error)
+        }
+    }
+}
+export default new TransactionController()

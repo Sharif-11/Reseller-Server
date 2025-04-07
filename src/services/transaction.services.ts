@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import Decimal from 'decimal.js'
 import ApiError from '../utils/ApiError'
 import SmsServices from './sms.services'
+import prisma from '../utils/prisma'
 
 class TransactionService {
   async checkExistingTransactionId(
@@ -13,6 +14,63 @@ class TransactionService {
     })
     if (existingTransaction) {
       throw new ApiError(400, 'Transaction ID already exists')
+    }
+  }
+  async getTransactionOfUser({
+    userId,
+    page=1,
+    pageSize=10,
+
+  }: {
+    userId: string;
+    page?: number
+    pageSize?: number
+  }) {
+    const transactions =  prisma.transaction.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    })
+    const totalTransactions =  prisma.transaction.count({
+      where: { userId },
+    })
+    const [transactionList, total] = await Promise.all([
+      transactions,
+      totalTransactions,
+    ])
+    return {
+      transactionList,
+      totalTransactions: total,
+      currentPage: page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    }
+
+  }
+  async getAllTransactionForAdmin({
+    page = 1,
+    pageSize = 10,
+  }: {
+    page?: number
+    pageSize?: number
+  }) {
+    const transactions =  prisma.transaction.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: pageSize,
+      skip: (page - 1) * pageSize,
+    })
+    const totalTransactions =  prisma.transaction.count()
+    const [transactionList, total] = await Promise.all([
+      transactions,
+      totalTransactions,
+    ])
+    return {
+      transactionList,
+      totalTransactions: total,
+      currentPage: page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
     }
   }
   /**

@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const decimal_js_1 = __importDefault(require("decimal.js"));
 const ApiError_1 = __importDefault(require("../utils/ApiError"));
 const sms_services_1 = __importDefault(require("./sms.services"));
+const prisma_1 = __importDefault(require("../utils/prisma"));
 class TransactionService {
     checkExistingTransactionId(tx, transactionId) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -24,6 +25,51 @@ class TransactionService {
             if (existingTransaction) {
                 throw new ApiError_1.default(400, 'Transaction ID already exists');
             }
+        });
+    }
+    getTransactionOfUser(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ userId, page = 1, pageSize = 10, }) {
+            const transactions = prisma_1.default.transaction.findMany({
+                where: { userId },
+                orderBy: { createdAt: 'desc' },
+                take: pageSize,
+                skip: (page - 1) * pageSize,
+            });
+            const totalTransactions = prisma_1.default.transaction.count({
+                where: { userId },
+            });
+            const [transactionList, total] = yield Promise.all([
+                transactions,
+                totalTransactions,
+            ]);
+            return {
+                transactionList,
+                totalTransactions: total,
+                currentPage: page,
+                pageSize,
+                totalPages: Math.ceil(total / pageSize),
+            };
+        });
+    }
+    getAllTransactionForAdmin(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ page = 1, pageSize = 10, }) {
+            const transactions = prisma_1.default.transaction.findMany({
+                orderBy: { createdAt: 'desc' },
+                take: pageSize,
+                skip: (page - 1) * pageSize,
+            });
+            const totalTransactions = prisma_1.default.transaction.count();
+            const [transactionList, total] = yield Promise.all([
+                transactions,
+                totalTransactions,
+            ]);
+            return {
+                transactionList,
+                totalTransactions: total,
+                currentPage: page,
+                pageSize,
+                totalPages: Math.ceil(total / pageSize),
+            };
         });
     }
     /**
