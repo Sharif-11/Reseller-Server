@@ -125,36 +125,36 @@ class WithdrawRequestServices {
   }) {
     const skip = (page - 1) * pageSize
 
-    const filter = {
+    const filter:Record<string,string> = {
       userId,
     }
-
-    const [requests, totalRequests] = await Promise.all([
-      prisma.withdrawRequest.findMany({
-        where: {
-          userId,
-          status: {
-            in: status ? [status] : ['pending', 'completed', 'rejected'],
-          },
-        },
-        orderBy: {
-          requestedAt: 'desc',
-        },
-        skip,
-        take: pageSize,
-      }),
-      prisma.withdrawRequest.count({
-        where: filter,
-      }),
-    ])
-
+    if (status) {
+      filter['status'] = status
+    }
+    const requests=  prisma.withdrawRequest.findMany({
+      where: filter,
+      orderBy: {
+        requestedAt: 'desc',
+      },
+      skip,
+      take: pageSize,
+    })
+    const totalRequests = prisma.withdrawRequest.count({
+      where: filter,
+    })
+    const [paginationRequest,overallRequests] = await Promise.all([requests, totalRequests])
     return {
-      requests,
-      totalRequests,
+      requests:paginationRequest,
+      totalRequests: overallRequests,
       currentPage: page,
       pageSize,
-      totalPages: Math.ceil(totalRequests / pageSize),
+      totalPages: Math.ceil(
+        overallRequests/ pageSize
+      ),
     }
+
+   
+    
   }
 
   /**
