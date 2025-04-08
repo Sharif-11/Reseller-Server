@@ -113,30 +113,27 @@ class WithdrawRequestServices {
             const filter = {
                 userId,
             };
-            const [requests, totalRequests] = yield Promise.all([
-                prisma_1.default.withdrawRequest.findMany({
-                    where: {
-                        userId,
-                        status: {
-                            in: status ? [status] : ['pending', 'completed', 'rejected'],
-                        },
-                    },
-                    orderBy: {
-                        requestedAt: 'desc',
-                    },
-                    skip,
-                    take: pageSize,
-                }),
-                prisma_1.default.withdrawRequest.count({
-                    where: filter,
-                }),
-            ]);
+            if (status) {
+                filter['status'] = status;
+            }
+            const requests = prisma_1.default.withdrawRequest.findMany({
+                where: filter,
+                orderBy: {
+                    requestedAt: 'desc',
+                },
+                skip,
+                take: pageSize,
+            });
+            const totalRequests = prisma_1.default.withdrawRequest.count({
+                where: filter,
+            });
+            const [paginationRequest, overallRequests] = yield Promise.all([requests, totalRequests]);
             return {
-                requests,
-                totalRequests,
+                requests: paginationRequest,
+                totalRequests: overallRequests,
                 currentPage: page,
                 pageSize,
-                totalPages: Math.ceil(totalRequests / pageSize),
+                totalPages: Math.ceil(overallRequests / pageSize),
             };
         });
     }
