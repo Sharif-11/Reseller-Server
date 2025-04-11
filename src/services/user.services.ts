@@ -30,6 +30,9 @@ class UserServices {
   async getUserByPhoneNo(phoneNo: string): Promise<User> {
     const user = await prisma.user.findUnique({
       where: { phoneNo },
+      include:{
+        wallets:true
+      }
     })
 
     if (!user) {
@@ -47,6 +50,9 @@ class UserServices {
   async getUserByUserId(userId: string): Promise<User> {
     const user = await prisma.user.findUnique({
       where: { userId },
+      include: {
+        wallets: true,
+      },
     })
 
     if (!user) {

@@ -5,6 +5,8 @@ import { isAuthenticated, verifyAdmin } from '../middlewares/auth.middlewares'
 import productRouter from './adminProduct.routes'
 import adminWithdrawRouter from './adminWithdraw.routes'
 import transactionController from '../controllers/transaction.controller'
+import adminWalletRouter from './adminWallet.routes'
+import commissionRoutes from './commissions.routes'
 // import transactionRouters from './transaction.routes'
 
 const adminRouter = Router()
@@ -12,17 +14,8 @@ adminRouter.use(isAuthenticated, verifyAdmin)
 adminRouter.use('/products', productRouter)
 // adminRouter.use('/transactions', transactionRouters)
 adminRouter.use('/withdraw', adminWithdrawRouter)
+adminRouter.use('/wallets',adminWalletRouter)
 adminRouter.get('/transactions', transactionController.getAllTransactionForAdmin)
-adminRouter.post('/commissions', commissionController.createCommissions)
-adminRouter.get('/commissions', commissionController.getFullCommissionTable)
-adminRouter.put('/commissions', commissionController.updateCommissionTable)
-adminRouter.get(
-  '/calculate-commissions',
-  commissionController.calculateCommissions
-)
-adminRouter.get(
-  '/commissions/:price',
-  commissionController.getCommissionsByPrice
-)
+adminRouter.use('/commissions', commissionRoutes)
 adminRouter.patch('/unlock-user', authControllers.unlockUser)
 export default adminRouter
