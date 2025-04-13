@@ -78,6 +78,19 @@ class WalletController {
       next(error)
     }
   }
+  async getAdminWalletsForUser(req: Request, res: Response, next: NextFunction) { 
+    try {
+      const wallets = await WalletService.getAdminWalletsForUser()
+      res.status(200).json({
+        statusCode: 200,
+        message: 'Wallets successfully retrieved',
+        success: true,
+        data: wallets,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
 }
 
 export default new WalletController()

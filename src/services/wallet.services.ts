@@ -111,6 +111,22 @@ class WalletService {
     })
     return wallets
   }
+  async getAdminWalletsForUser(){
+    // find admin at first 
+    const admin=await userServices.getAdminForTheUsers()
+    if (!admin) {
+      throw new ApiError(404, 'There is an error.Please try later')
+    }
+    const wallets = await prisma.wallet.findMany({
+      where: { userId: admin.userId },
+      select:{
+        walletId:true,
+        walletName:true,
+        walletPhoneNo:true,
+      }
+    })
+    return wallets
+  }
 
 }
 export default new WalletService()

@@ -55,6 +55,47 @@ class WalletService {
             return newWallet;
         });
     }
+    addAdminWallet(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ userId, walletName, walletPhoneNo, }) {
+            const user = yield user_services_1.default.getUserByUserId(String(userId));
+            if (!user) {
+                throw new ApiError_1.default(404, 'User not found');
+            }
+            // find if is there any wallet with the same phone number
+            const wallet = yield prisma_1.default.wallet.findUnique({
+                where: { walletName_walletPhoneNo: { walletName, walletPhoneNo } },
+            });
+            if (wallet) {
+                throw new ApiError_1.default(400, 'এই ফোন নম্বর সহ একটি ওয়ালেট ইতিমধ্যে বিদ্যমান');
+            }
+            // create a new wallet
+            const newWallet = yield prisma_1.default.wallet.create({
+                data: {
+                    walletName,
+                    walletPhoneNo,
+                    userId: user.userId,
+                    userName: user.name,
+                    userPhoneNo: user.phoneNo,
+                },
+            });
+            return newWallet;
+        });
+    }
+    deleteAdminWallet(walletId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const wallet = yield prisma_1.default.wallet.findUnique({
+                where: { walletId },
+            });
+            if (!wallet) {
+                throw new ApiError_1.default(404, 'ওয়ালেট পাওয়া যায়নি');
+            }
+            // delete the wallet
+            const result = yield prisma_1.default.wallet.delete({
+                where: { walletId },
+            });
+            return result;
+        });
+    }
     // create a method to find all wallets of a user
     getWallets(userId) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -64,6 +105,24 @@ class WalletService {
             }
             const wallets = yield prisma_1.default.wallet.findMany({
                 where: { userId: user.userId },
+            });
+            return wallets;
+        });
+    }
+    getAdminWalletsForUser() {
+        return __awaiter(this, void 0, void 0, function* () {
+            // find admin at first 
+            const admin = yield user_services_1.default.getAdminForTheUsers();
+            if (!admin) {
+                throw new ApiError_1.default(404, 'There is an error.Please try later');
+            }
+            const wallets = yield prisma_1.default.wallet.findMany({
+                where: { userId: admin.userId },
+                select: {
+                    walletId: true,
+                    walletName: true,
+                    walletPhoneNo: true,
+                }
             });
             return wallets;
         });

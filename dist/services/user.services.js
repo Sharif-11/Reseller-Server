@@ -43,6 +43,9 @@ class UserServices {
         return __awaiter(this, void 0, void 0, function* () {
             const user = yield prisma_1.default.user.findUnique({
                 where: { phoneNo },
+                include: {
+                    wallets: true
+                }
             });
             if (!user) {
                 throw new ApiError_1.default(404, 'ব্যবহারকারী পাওয়া যায়নি');
@@ -59,6 +62,9 @@ class UserServices {
         return __awaiter(this, void 0, void 0, function* () {
             const user = yield prisma_1.default.user.findUnique({
                 where: { userId },
+                include: {
+                    wallets: true,
+                },
             });
             if (!user) {
                 throw new ApiError_1.default(404, 'ব্যবহারকারী পাওয়া যায়নি');
@@ -353,6 +359,19 @@ class UserServices {
                 data: { isLocked: false, forgotPasswordSmsCount: 0 },
             });
             return { unLocked: true };
+        });
+    }
+    getAdminForTheUsers() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const admins = yield prisma_1.default.user.findFirst({
+                where: {
+                    role: 'Admin',
+                },
+                select: {
+                    userId: true,
+                },
+            });
+            return admins;
         });
     }
 }

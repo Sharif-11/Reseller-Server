@@ -411,6 +411,17 @@ class UserServices {
 
     return { unLocked: true }
   }
+  async getAdminForTheUsers(){
+    const admins = await prisma.user.findFirst({
+      where: {
+        role: 'Admin',
+      },
+      select: {
+        userId: true,
+      },
+    })
+    return admins
+  }
 }
 
 export default new UserServices()

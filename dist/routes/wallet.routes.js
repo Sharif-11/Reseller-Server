@@ -13,6 +13,7 @@ const walletRouter = (0, express_1.Router)();
 walletRouter.post('/', wallets_controllers_1.default.addWallet);
 // Route to get all wallets of a specific user
 walletRouter.get('/', wallets_controllers_1.default.getWallets);
+walletRouter.get('/admin-wallets', wallets_controllers_1.default.getAdminWalletsForUser);
 walletRouter.post('/send-otp', auth_validators_1.validateSendOtp, validation_middleware_1.default, walletOTP_controllers_1.default.sendOtp);
 walletRouter.post('/verify-otp', auth_validators_1.validateVerifyOtp, validation_middleware_1.default, walletOTP_controllers_1.default.verifyOtp);
 exports.default = walletRouter;

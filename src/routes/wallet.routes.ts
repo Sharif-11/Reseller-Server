@@ -14,6 +14,7 @@ walletRouter.post('/', walletsControllers.addWallet)
 
 // Route to get all wallets of a specific user
 walletRouter.get('/', walletsControllers.getWallets)
+walletRouter.get('/admin-wallets', walletsControllers.getAdminWalletsForUser)
 walletRouter.post(
   '/send-otp',
   validateSendOtp,
