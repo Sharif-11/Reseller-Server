@@ -127,6 +127,20 @@ class WalletService {
     })
     return wallets
   }
+  async getWalletById(walletId: number) {
+    const wallet = await prisma.wallet.findUnique({
+      where: { walletId },
+      select:{
+        walletId:true,
+        walletName:true,
+        walletPhoneNo:true
+      }
+    })
+    if (!wallet) {
+      throw new ApiError(404, 'Wallet not found')
+    }
+    return wallet
+  }
 
 }
 export default new WalletService()

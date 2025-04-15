@@ -7,16 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  Admin
-  Seller
-}
-
-enum TransactionType {
-  Credit
-  Debit
-}
-
 model User {
   userId                 String   @id @default(cuid()) // Use cuid for userId
   phoneNo                String   @unique
@@ -32,7 +22,7 @@ model User {
   password               String
   isVerified             Boolean  @default(false)
   balance                Decimal  @default(0.0) @db.Decimal(15, 2) // Decimal for balance with precision 10 and scale 2
-  shopName               String? // Optional
+  shopName               String // Optional
   nomineePhone           String? // Optional
   forgotPasswordSmsCount Int      @default(0) // Tracks the number of forgot password SMS sent
   isLocked               Boolean  @default(false) // Indicates whether the user is locked
@@ -197,8 +187,8 @@ model WithdrawRequest {
   userPhoneNo        String
   userName           String
   amount             Decimal        @db.Decimal(15, 2)
-  actualAmount        Decimal        @db.Decimal(15, 2)
-  transactionFee    Decimal        @db.Decimal(15, 2)
+  actualAmount       Decimal        @db.Decimal(15, 2)
+  transactionFee     Decimal        @db.Decimal(15, 2)
   walletName         String
   walletPhoneNo      String
   transactionId      String?
@@ -211,77 +201,71 @@ model WithdrawRequest {
   @@map("withdraw_requests")
 }
 
-model Order{
-  orderId         Int   @id @default(autoincrement())
+model Order {
+  orderId         Int         @id @default(autoincrement())
   orderStatus     OrderStatus @default(pending)
-  orderCreatedAt  DateTime @default(now())
-  orderUpdatedAt  DateTime @updatedAt
-  orderCompletedAt DateTime?
-  cancelledByUser Boolean @default(false)
+  orderCreatedAt  DateTime    @default(now())
+  orderUpdatedAt  DateTime    @updatedAt
+  cancelledByUser Boolean     @default(false)
 
   sellerId       String
   sellerName     String
   sellerPhoneNo  String
   sellerVerified Boolean
   sellerShopName String
-  sellerBalance Decimal @db.Decimal(15, 2)
+  sellerBalance  Decimal @db.Decimal(15, 2)
 
-  customerName String
-  customerPhoneNo String
-  customerZilla String
+  customerName     String
+  customerPhoneNo  String
+  customerZilla    String
   customerUpazilla String
-  deliveryAddress String
-  comments String?
+  deliveryAddress  String
+  comments         String?
 
   courierName String?
   trackingURL String?
 
   orderProducts OrderProduct[] // One-to-many relationship with OrderProduct
 
-  deliveryCharge Decimal @db.Decimal(15, 2)
-  deliveryChargePaidBySeller Decimal?  @db.Decimal(15, 2) 
-  isDeliveryChargePaidBySeller Boolean @default(false)
-  transactionId String  @unique
-  transactionVerified Boolean @default(false)
-  sellerWalletName String
-  sellerWalletPhoneNo String
-  adminWalletId String
-  adminWalletName String
-  adminWalletPhoneNo String
+  deliveryCharge               Decimal  @db.Decimal(15, 2)
+  deliveryChargePaidBySeller   Decimal? @db.Decimal(15, 2)
+  isDeliveryChargePaidBySeller Boolean  @default(false)
+  transactionId                String?  @unique
+  transactionVerified          Boolean? @default(false)
+  sellerWalletName             String?
+  sellerWalletPhoneNo          String?
+  adminWalletId                Int?
+  adminWalletName              String?
+  adminWalletPhoneNo           String?
 
-  totalAmount Decimal @db.Decimal(15, 2)
-  totalCommission Decimal @db.Decimal(15, 2) 
-  actualCommission Decimal @db.Decimal(15, 2)
-  totalProductBasePrice Decimal @db.Decimal(15, 2)
-  totalProductSellingPrice Decimal @db.Decimal(15, 2)
-  totalProductQuantity Int
-  totalAmountPaidByCustomer Decimal? @db.Decimal(15, 2) 
+  totalAmount               Decimal  @db.Decimal(15, 2)
+  totalCommission           Decimal  @db.Decimal(15, 2)
+  actualCommission          Decimal  @db.Decimal(15, 2)
+  totalProductBasePrice     Decimal  @db.Decimal(15, 2)
+  totalProductSellingPrice  Decimal  @db.Decimal(15, 2)
+  totalProductQuantity      Int
+  totalAmountPaidByCustomer Decimal? @db.Decimal(15, 2)
 
   @@map("orders")
 }
 
-model OrderProduct{
-  orderProductId Int @id @default(autoincrement())
-  orderId Int
-  productId Int
-  productName String
-  productImage String
-  productBasePrice Decimal @db.Decimal(15, 2)
-  productSellingPrice Decimal @db.Decimal(15, 2)
-  productQuantity Int
-  productTotalBasePrice Decimal @db.Decimal(15, 2)
+model OrderProduct {
+  orderProductId           Int     @id @default(autoincrement())
+  orderId                  Int
+  productId                Int
+  productName              String
+  productImage             String
+  productBasePrice         Decimal @db.Decimal(15, 2)
+  productSellingPrice      Decimal @db.Decimal(15, 2)
+  productQuantity          Int
+  productTotalBasePrice    Decimal @db.Decimal(15, 2)
   productTotalSellingPrice Decimal @db.Decimal(15, 2)
-  selectedOptions String? // Optional field for selected options (e.g., size, color)
-  
+  // selected option is an array of key value pairs
+  selectedOptions          Json?
+
   order Order @relation(fields: [orderId], references: [orderId])
 
   @@map("order_products")
-}
-
-enum WithdrawStatus {
-  pending
-  completed
-  rejected
 }
 
 enum OrderStatus {
@@ -293,5 +277,21 @@ enum OrderStatus {
   returned
   rejected
   refunded
-  completed 
+  completed
+}
+
+enum WithdrawStatus {
+  pending
+  completed
+  rejected
+}
+
+enum Role {
+  Admin
+  Seller
+}
+
+enum TransactionType {
+  Credit
+  Debit
 }

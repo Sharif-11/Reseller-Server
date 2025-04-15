@@ -225,6 +225,7 @@ class ProductService {
       const product = await prisma.product.findUnique({
         where: { productId },
         include: {
+          
           images: {
             select: {
               imageId: true,

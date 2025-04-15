@@ -19,6 +19,9 @@ export default {
   maxForgotPasswordAttempts: 3,
   maximumWallets: 3,
   maximumWithdrawAmount: 10000,
+  deliveryChargeInsideDhaka: 80,
+  deliveryChargeOutsideDhaka: 130,
+  negativeBalanceLimit: -10,
 
   // cloudinaryKey: process.env.CLOUDINARY_KEY,
   // cloudinarySecret: process.env.CLOUDINARY_SECRET,

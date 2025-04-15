@@ -10,11 +10,13 @@ const sellerProducts_route_1 = __importDefault(require("./sellerProducts.route")
 const sellerWithdraw_routes_1 = __importDefault(require("./sellerWithdraw.routes"));
 const wallet_routes_1 = __importDefault(require("./wallet.routes"));
 const transaction_controller_1 = __importDefault(require("../controllers/transaction.controller"));
+const sellerOrder_routes_1 = __importDefault(require("./sellerOrder.routes"));
 const sellerRouter = (0, express_1.Router)();
 sellerRouter.use(auth_middlewares_1.isAuthenticated, auth_middlewares_1.verifySeller);
 sellerRouter.post('/add-referral', auth_controllers_1.default.addReferralCode);
 sellerRouter.use('/products', sellerProducts_route_1.default);
 sellerRouter.use('/wallets', wallet_routes_1.default);
 sellerRouter.use('/withdraw', sellerWithdraw_routes_1.default);
+sellerRouter.use('/orders', sellerOrder_routes_1.default);
 sellerRouter.get('/transactions', transaction_controller_1.default.getTransactionOfUser);
 exports.default = sellerRouter;

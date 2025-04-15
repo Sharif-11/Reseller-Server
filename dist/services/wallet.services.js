@@ -127,5 +127,21 @@ class WalletService {
             return wallets;
         });
     }
+    getWalletById(walletId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const wallet = yield prisma_1.default.wallet.findUnique({
+                where: { walletId },
+                select: {
+                    walletId: true,
+                    walletName: true,
+                    walletPhoneNo: true
+                }
+            });
+            if (!wallet) {
+                throw new ApiError_1.default(404, 'Wallet not found');
+            }
+            return wallet;
+        });
+    }
 }
 exports.default = new WalletService();
