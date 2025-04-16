@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateProductsSummary = exports.calculateAmountToPay = exports.calculateExtraDeliveryCharge = void 0;
+exports.calculateProductsSummary = exports.calculateAmountToPay = exports.calculateExtraDeliveryCharge = exports.calculateAmountToDeductOrAddForOrder = void 0;
 const config_1 = __importDefault(require("../config"));
 const calculateExtraDeliveryCharge = (productCount) => {
     if (productCount <= 3)
@@ -76,13 +76,35 @@ const calculateAmountToPay = (params) => {
     };
 };
 exports.calculateAmountToPay = calculateAmountToPay;
+const calculateAmountToDeductOrAddForOrder = ({ isDeliveryChargePaidBySeller, deliveryChargePaidBySeller, totalDeliveryCharge, }) => {
+    if (isDeliveryChargePaidBySeller) {
+        if (deliveryChargePaidBySeller < totalDeliveryCharge) {
+            return {
+                deductFromBalance: totalDeliveryCharge - deliveryChargePaidBySeller,
+            };
+        }
+        else if (deliveryChargePaidBySeller === totalDeliveryCharge) {
+            return {};
+        }
+        else {
+            return {
+                addToBalance: deliveryChargePaidBySeller - totalDeliveryCharge,
+            };
+        }
+    }
+    else {
+        return {
+            deductFromBalance: totalDeliveryCharge,
+        };
+    }
+};
+exports.calculateAmountToDeductOrAddForOrder = calculateAmountToDeductOrAddForOrder;
 /**
  * Calculates various totals from cart items
  * @param cartItems - Array of cart items
  * @returns Object containing all calculated totals
  */
 const calculateProductsSummary = (cartItems) => {
-    console.log('inside calculateProductsSummary');
     // Initialize all totals to 0
     const initialTotals = {
         totalProductQuantity: 0,

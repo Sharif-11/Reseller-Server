@@ -207,6 +207,7 @@ model Order {
   orderCreatedAt  DateTime    @default(now())
   orderUpdatedAt  DateTime    @updatedAt
   cancelledByUser Boolean     @default(false)
+  remarks         String? // Optional remarks for the order
 
   sellerId       String
   sellerName     String
@@ -263,7 +264,7 @@ model OrderProduct {
   // selected option is an array of key value pairs
   selectedOptions          Json?
 
-  order Order @relation(fields: [orderId], references: [orderId])
+  order Order @relation(fields: [orderId], references: [orderId], onDelete: Cascade) // Foreign key to Order table
 
   @@map("order_products")
 }

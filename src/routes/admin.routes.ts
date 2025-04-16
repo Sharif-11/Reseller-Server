@@ -7,6 +7,7 @@ import adminWithdrawRouter from './adminWithdraw.routes'
 import transactionController from '../controllers/transaction.controller'
 import adminWalletRouter from './adminWallet.routes'
 import commissionRoutes from './commissions.routes'
+import adminOrdersRoutes from './adminOrders.routes'
 // import transactionRouters from './transaction.routes'
 
 const adminRouter = Router()
@@ -14,6 +15,7 @@ adminRouter.use(isAuthenticated, verifyAdmin)
 adminRouter.use('/products', productRouter)
 // adminRouter.use('/transactions', transactionRouters)
 adminRouter.use('/withdraw', adminWithdrawRouter)
+adminRouter.use('/orders',adminOrdersRoutes)
 adminRouter.use('/wallets',adminWalletRouter)
 adminRouter.get('/transactions', transactionController.getAllTransactionForAdmin)
 adminRouter.use('/commissions', commissionRoutes)

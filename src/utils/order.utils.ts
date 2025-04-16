@@ -101,6 +101,43 @@ const calculateAmountToPay = (params: AmountToPayParams): AmountToPayResult => {
       deliveryCharge:totalDeliveryCharge,
     };
   };
+export const calculateAmountToDeductOrAddForOrder=({
+  isDeliveryChargePaidBySeller,
+  deliveryChargePaidBySeller,
+  totalDeliveryCharge,
+}:{
+ 
+  isDeliveryChargePaidBySeller: boolean;
+  deliveryChargePaidBySeller: number|null;
+  totalDeliveryCharge: number;
+}):{
+  deductFromBalance?: number;
+  addToBalance?:number
+}=>{
+  
+    if(isDeliveryChargePaidBySeller){
+      if(deliveryChargePaidBySeller!<totalDeliveryCharge){
+        return {
+          deductFromBalance:totalDeliveryCharge-deliveryChargePaidBySeller!,
+        }
+      }
+      else if (deliveryChargePaidBySeller===totalDeliveryCharge){
+        return {}
+      }
+      else{
+        return {     
+          addToBalance:deliveryChargePaidBySeller!-totalDeliveryCharge,
+        }
+      }
+    }
+    else {
+       return {
+        deductFromBalance:totalDeliveryCharge,
+
+       }
+    }
+  }
+
 
 
   
@@ -110,7 +147,6 @@ const calculateAmountToPay = (params: AmountToPayParams): AmountToPayResult => {
    * @returns Object containing all calculated totals
    */
 const calculateProductsSummary = (cartItems:OrderProduct[]):productsSummary  => { 
-   console.log('inside calculateProductsSummary')
     // Initialize all totals to 0
     const initialTotals = {
       totalProductQuantity: 0,
