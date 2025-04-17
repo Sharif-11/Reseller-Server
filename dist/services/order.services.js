@@ -515,5 +515,68 @@ class OrderServices {
             return updatedOrder;
         });
     }
+    /**
+     * Get all orders by user ID with pagination and filtering by status, status may be an array or string
+     * @param sellerId - Seller ID to fetch orders for
+     * @return List of orders
+     */
+    getOrdersByUserId(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ sellerId, status, page = 1, pageSize = 10 }) {
+            const orders = yield prisma_1.default.order.findMany({
+                where: Object.assign({ sellerId }, (status && {
+                    orderStatus: Array.isArray(status) ? { in: status } : status
+                })),
+                include: { orderProducts: true },
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+                orderBy: {
+                    orderCreatedAt: 'desc'
+                }
+            });
+            const totalOrders = yield prisma_1.default.order.count({
+                where: Object.assign({ sellerId }, (status && {
+                    orderStatus: Array.isArray(status) ? { in: status } : status
+                }))
+            });
+            const totalPages = Math.ceil(totalOrders / pageSize);
+            return {
+                orders,
+                totalOrders,
+                totalPages,
+                currentPage: page,
+                pageSize
+            };
+            return orders;
+        });
+    }
+    getOrdersForAdmin(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ status, page = 1, pageSize = 10 }) {
+            const orders = yield prisma_1.default.order.findMany({
+                where: Object.assign({}, (status && {
+                    orderStatus: Array.isArray(status) ? { in: status } : status
+                })),
+                include: { orderProducts: true },
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+                orderBy: {
+                    orderCreatedAt: 'desc'
+                }
+            });
+            const totalOrders = yield prisma_1.default.order.count({
+                where: Object.assign({}, (status && {
+                    orderStatus: Array.isArray(status) ? { in: status } : status
+                }))
+            });
+            const totalPages = Math.ceil(totalOrders / pageSize);
+            return {
+                orders,
+                totalOrders,
+                totalPages,
+                currentPage: page,
+                pageSize
+            };
+            return orders;
+        });
+    }
 }
 exports.default = new OrderServices();

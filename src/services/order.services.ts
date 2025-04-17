@@ -570,5 +570,85 @@ async returnOrderByAdmin(orderId: number): Promise<Order> {
 
   return updatedOrder
 }
+/**
+ * Get all orders by user ID with pagination and filtering by status, status may be an array or string
+ * @param sellerId - Seller ID to fetch orders for
+ * @return List of orders
+ */
+async getOrdersByUserId({sellerId,status,page=1,pageSize=10}:{
+  sellerId: string
+  status?: OrderStatus | OrderStatus[]
+  page?: number
+  pageSize?: number
+}) {
+  const orders = await prisma.order.findMany({
+    where: {
+      sellerId,
+      ...(status && {
+        orderStatus: Array.isArray(status) ? { in: status } : status
+      })
+    },
+    include: { orderProducts: true },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+    orderBy: {
+      orderCreatedAt: 'desc'
+    }
+  })
+  const totalOrders = await prisma.order.count({
+    where: {
+      sellerId,
+      ...(status && {
+        orderStatus: Array.isArray(status) ? { in: status } : status
+      })
+    }
+  })
+  const totalPages = Math.ceil(totalOrders / pageSize)
+  return {
+    orders,
+    totalOrders,
+    totalPages,
+    currentPage: page,
+    pageSize
+  }
+
+  return orders
+}
+async getOrdersForAdmin({status,page=1,pageSize=10}:{
+  status?: OrderStatus | OrderStatus[]
+  page?: number
+  pageSize?: number
+}) {
+  const orders = await prisma.order.findMany({
+    where: {
+      ...(status && {
+        orderStatus: Array.isArray(status) ? { in: status } : status
+      })
+    },
+    include: { orderProducts: true },
+    skip: (page - 1) * pageSize,
+    take: pageSize,
+    orderBy: {
+      orderCreatedAt: 'desc'
+    }
+  })
+  const totalOrders = await prisma.order.count({
+    where: {
+      ...(status && {
+        orderStatus: Array.isArray(status) ? { in: status } : status
+      })
+    }
+  })
+  const totalPages = Math.ceil(totalOrders / pageSize)
+  return {
+    orders,
+    totalOrders,
+    totalPages,
+    currentPage: page,
+    pageSize
+  }
+
+  return orders
+}
 }
 export default new OrderServices()

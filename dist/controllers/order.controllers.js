@@ -192,5 +192,51 @@ class OrderController {
             }
         });
     }
+    getOrdersBySellerId(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const sellerId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+                const { status, page, pageSize } = req.query;
+                console.log({ status, page, pageSize });
+                const orders = yield order_services_1.default.getOrdersByUserId({
+                    sellerId: sellerId,
+                    status: status,
+                    page: page ? +page : 1,
+                    pageSize: pageSize ? +pageSize : 10,
+                });
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'অর্ডার সফলভাবে পাওয়া গেছে',
+                    success: true,
+                    data: orders,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    getOrdersForAdmin(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { status, page, pageSize } = req.query;
+                const orders = yield order_services_1.default.getOrdersForAdmin({
+                    status: status,
+                    page: page ? +page : 1,
+                    pageSize: pageSize ? +pageSize : 10,
+                });
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'অর্ডার সফলভাবে পাওয়া গেছে',
+                    success: true,
+                    data: orders,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
 }
 exports.default = new OrderController();

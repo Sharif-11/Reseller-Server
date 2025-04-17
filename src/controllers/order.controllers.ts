@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express'
 import OrderServices from '../services/order.services'
 import ApiError from '../utils/ApiError'
+import { OrderStatus } from '@prisma/client'
 
 class OrderController {
   /**
@@ -154,6 +155,45 @@ class OrderController {
         message: 'অর্ডার সফলভাবে ফেরত দেওয়া হয়েছে',
         success: true,
         data: order,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  async getOrdersBySellerId(req: Request, res: Response, next: NextFunction) {
+    try {
+      const sellerId = req.user?.userId
+      const {status,page,pageSize}= req.query
+      console.log({status,page,pageSize})
+      const orders = await OrderServices.getOrdersByUserId({
+        sellerId: sellerId!,
+        status: status as OrderStatus | OrderStatus[],
+        page: page ? +page : 1,
+        pageSize: pageSize ? +pageSize : 10,
+      })
+      res.status(200).json({
+        statusCode: 200,
+        message: 'অর্ডার সফলভাবে পাওয়া গেছে',
+        success: true,
+        data: orders,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  async getOrdersForAdmin(req: Request, res: Response, next: NextFunction) {
+    try {
+      const {status,page,pageSize}= req.query
+      const orders = await OrderServices.getOrdersForAdmin({
+        status: status as OrderStatus | OrderStatus[],
+        page: page ? +page : 1,
+        pageSize: pageSize ? +pageSize : 10,
+      })
+      res.status(200).json({
+        statusCode: 200,
+        message: 'অর্ডার সফলভাবে পাওয়া গেছে',
+        success: true,
+        data: orders,
       })
     } catch (error) {
       next(error)
