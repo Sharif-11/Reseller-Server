@@ -69,7 +69,7 @@ class OrderController {
                 const order = yield order_services_1.default.cancelOrderByAdmin(orderId, remarks);
                 res.status(200).json({
                     statusCode: 200,
-                    message: 'অর্ডার সফলভাবে বাতিল হয়েছে',
+                    message: 'অর্ডার সফলভাবে বাতিল করা হয়েছে এবং টাকা ফেরত দেওয়া হয়েছে',
                     success: true,
                     data: order,
                 });
@@ -161,8 +161,8 @@ class OrderController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const orderId = +req.params.orderId;
-                const { amountPaidByCustomer } = req.body;
-                const order = yield order_services_1.default.completeOrderByAdmin(orderId, amountPaidByCustomer);
+                const { totalAmountPaidByCustomer } = req.body;
+                const order = yield order_services_1.default.completeOrderByAdmin(orderId, totalAmountPaidByCustomer);
                 res.status(200).json({
                     statusCode: 200,
                     message: 'অর্ডার সফলভাবে সম্পন্ন হয়েছে',
@@ -179,7 +179,6 @@ class OrderController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const orderId = +req.params.orderId;
-                const remarks = req.body.remarks;
                 const order = yield order_services_1.default.returnOrderByAdmin(orderId);
                 res.status(200).json({
                     statusCode: 200,

@@ -20,6 +20,7 @@ const wallet_services_1 = __importDefault(require("./wallet.services"));
 const product_services_1 = __importDefault(require("./product.services"));
 const order_utils_1 = require("../utils/order.utils");
 const transaction_services_1 = __importDefault(require("./transaction.services"));
+const config_1 = __importDefault(require("../config"));
 class OrderServices {
     /**
      * Create order from frontend data (dummy implementation)
@@ -98,7 +99,8 @@ class OrderServices {
                         // Payment info
                         deliveryCharge,
                         isDeliveryChargePaidBySeller: frontendData.isDeliveryChargePaidBySeller,
-                        deliveryChargePaidBySeller: frontendData.deliveryChargePaidBySeller,
+                        deliveryChargeMustBePaidBySeller: amountToPay,
+                        deliveryChargePaidBySeller: amountToPay,
                         transactionId: frontendData.transactionId,
                         sellerWalletName: frontendData.sellerWalletName,
                         sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo,
@@ -349,7 +351,7 @@ class OrderServices {
                 const updatedOrder = yield tx.order.update({
                     where: { orderId },
                     data: {
-                        orderStatus: client_1.OrderStatus.cancelled,
+                        orderStatus: client_1.OrderStatus.refunded,
                         remarks: remarks ? remarks : null,
                     },
                 });
@@ -458,6 +460,19 @@ class OrderServices {
                         totalAmountPaidByCustomer: amountPaidByCustomer,
                         actualCommission,
                     },
+                });
+                // count how many order are completed
+                const completedOrdersCount = yield tx.order.count({
+                    where: {
+                        orderStatus: client_1.OrderStatus.completed,
+                        sellerId: order.sellerId,
+                    },
+                });
+                // verify the seller
+                const isVerified = completedOrdersCount >= config_1.default.minimumOrderCompletedToBeVerified ? true : false;
+                yield tx.user.update({
+                    where: { userId: order.sellerId },
+                    data: { isVerified },
                 });
                 yield transaction_services_1.default.addSellerCommission({
                     tx,

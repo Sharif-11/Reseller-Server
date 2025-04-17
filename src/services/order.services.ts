@@ -6,6 +6,7 @@ import walletServices from './wallet.services'
 import productServices from './product.services'
 import { calculateAmountToDeductOrAddForOrder, calculateAmountToPay, calculateProductsSummary } from '../utils/order.utils'
 import transactionServices from './transaction.services'
+import config from '../config'
 
 class OrderServices {
   /**
@@ -127,7 +128,9 @@ class OrderServices {
           // Payment info
           deliveryCharge,
           isDeliveryChargePaidBySeller: frontendData.isDeliveryChargePaidBySeller,
-          deliveryChargePaidBySeller: frontendData.deliveryChargePaidBySeller,
+          deliveryChargeMustBePaidBySeller:amountToPay,
+          deliveryChargePaidBySeller: amountToPay,
+          
           transactionId: frontendData.transactionId,
           sellerWalletName: frontendData.sellerWalletName,
           sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo,
@@ -389,7 +392,7 @@ async cancelOrderBySeller(orderId: number,sellerId:string): Promise<Order> {
     const updatedOrder=await tx.order.update({
       where: { orderId },
       data: {
-        orderStatus: OrderStatus.cancelled,
+        orderStatus: OrderStatus.refunded,
         remarks: remarks ? remarks : null,
       },
     });
@@ -498,6 +501,7 @@ async completeOrderByAdmin(orderId: number,amountPaidByCustomer:number): Promise
   }
   const actualCommission= amountPaidByCustomer - order.totalProductBasePrice.toNumber()
   const updatedOrder=await prisma.$transaction(async(tx)=>{
+    
     const updatedOrder=await tx.order.update({
       where: { orderId },
       data: {
@@ -507,6 +511,20 @@ async completeOrderByAdmin(orderId: number,amountPaidByCustomer:number): Promise
         
       },
     });
+    // count how many order are completed
+    const completedOrdersCount = await tx.order.count({
+      where: {
+        orderStatus: OrderStatus.completed,
+        sellerId: order.sellerId,
+      },
+    });
+     // verify the seller
+     const isVerified = completedOrdersCount >= config.minimumOrderCompletedToBeVerified ? true : false;
+      await tx.user.update({
+        where: { userId: order.sellerId },
+        data: { isVerified },
+      });
+
     await transactionServices.addSellerCommission({
       tx,
       userId:order.sellerId,

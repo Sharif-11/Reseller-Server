@@ -228,16 +228,17 @@ model Order {
 
   orderProducts OrderProduct[] // One-to-many relationship with OrderProduct
 
-  deliveryCharge               Decimal  @db.Decimal(15, 2)
-  deliveryChargePaidBySeller   Decimal? @db.Decimal(15, 2)
-  isDeliveryChargePaidBySeller Boolean  @default(false)
-  transactionId                String?  @unique
-  transactionVerified          Boolean? @default(false)
-  sellerWalletName             String?
-  sellerWalletPhoneNo          String?
-  adminWalletId                Int?
-  adminWalletName              String?
-  adminWalletPhoneNo           String?
+  deliveryCharge                   Decimal  @db.Decimal(15, 2)
+  deliveryChargeMustBePaidBySeller Decimal? @db.Decimal(15, 2)
+  deliveryChargePaidBySeller       Decimal? @db.Decimal(15, 2)
+  isDeliveryChargePaidBySeller     Boolean  @default(false)
+  transactionId                    String?  @unique
+  transactionVerified              Boolean? @default(false)
+  sellerWalletName                 String?
+  sellerWalletPhoneNo              String?
+  adminWalletId                    Int?
+  adminWalletName                  String?
+  adminWalletPhoneNo               String?
 
   totalAmount               Decimal  @db.Decimal(15, 2)
   totalCommission           Decimal  @db.Decimal(15, 2)

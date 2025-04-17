@@ -365,7 +365,7 @@ class TransactionService {
       userPhoneNo: user.phoneNo,
       userName: user.name,
       type: 'Debit',
-      reason: 'অর্ডার ডিপোজিট চার্জ',
+      reason: 'ডেলিভারি চার্জ কর্তন',
       remarks: 'অর্ডার অনুমোদনের জন্য ডেলিভারি চার্জ কাটা হয়েছে',
     })
 
@@ -468,7 +468,7 @@ class TransactionService {
       userPhoneNo: userPhoneNo,
       userName: userName,
       type: 'Credit',
-      reason: 'বিক্রয় কমিশন',
+      reason: 'সেলস কমিশন ',
     })
     return transaction
  

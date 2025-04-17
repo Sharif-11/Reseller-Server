@@ -22,6 +22,7 @@ export default {
   deliveryChargeInsideDhaka: 80,
   deliveryChargeOutsideDhaka: 130,
   negativeBalanceLimit: -10,
+  minimumOrderCompletedToBeVerified: 1,
 
   // cloudinaryKey: process.env.CLOUDINARY_KEY,
   // cloudinarySecret: process.env.CLOUDINARY_SECRET,

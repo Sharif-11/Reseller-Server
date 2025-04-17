@@ -55,7 +55,7 @@ class OrderController {
       const order = await OrderServices.cancelOrderByAdmin(orderId,remarks)
       res.status(200).json({
         statusCode: 200,
-        message: 'অর্ডার সফলভাবে বাতিল হয়েছে',
+        message: 'অর্ডার সফলভাবে বাতিল করা হয়েছে এবং টাকা ফেরত দেওয়া হয়েছে',
         success: true,
         data: order,
       })
@@ -133,8 +133,8 @@ class OrderController {
   async completeOrder(req: Request, res: Response, next: NextFunction) {
     try {
       const orderId = +req.params.orderId
-      const {amountPaidByCustomer}= req.body
-      const order = await OrderServices.completeOrderByAdmin(orderId,amountPaidByCustomer)
+      const {totalAmountPaidByCustomer}= req.body
+      const order = await OrderServices.completeOrderByAdmin(orderId,totalAmountPaidByCustomer)
       res.status(200).json({
         statusCode: 200,
         message: 'অর্ডার সফলভাবে সম্পন্ন হয়েছে',
@@ -148,7 +148,6 @@ class OrderController {
   async returnOrder(req: Request, res: Response, next: NextFunction) {
     try {
       const orderId = +req.params.orderId
-      const remarks= req.body.remarks
       const order = await OrderServices.returnOrderByAdmin(orderId)
       res.status(200).json({
         statusCode: 200,
