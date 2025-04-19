@@ -133,7 +133,13 @@ class OrderServices {
                 }
             });
             if (!needsPayment) {
-                yield this.approveOrderByAdmin({ orderId: order.orderId });
+                try {
+                    yield this.approveOrderByAdmin({ orderId: order.orderId });
+                }
+                catch (error) {
+                    // handle error
+                    console.log('Error approving order:', error);
+                }
             }
             return order;
         });

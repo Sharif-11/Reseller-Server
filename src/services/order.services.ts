@@ -165,7 +165,13 @@ class OrderServices {
       }
     });
     if(!needsPayment){
-      await this.approveOrderByAdmin({orderId:order.orderId})
+        try{
+          await this.approveOrderByAdmin({orderId:order.orderId})
+        }
+        catch(error){
+          // handle error
+          console.log('Error approving order:',error)
+        }
     }
 
     return order
