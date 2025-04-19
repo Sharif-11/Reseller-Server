@@ -1,5 +1,5 @@
 // courierTracker.ts
-export interface TrackingResponse {
+interface TrackingResponse {
     success: boolean;
     courier: string;
     trackingNumber: string;
@@ -11,7 +11,7 @@ export interface TrackingResponse {
     error?: string;
   }
   
-  export interface TrackingStep {
+   interface TrackingStep {
     id: number;
     status: 'completed' | 'active' | 'pending';
     title: string;
@@ -19,12 +19,12 @@ export interface TrackingResponse {
     date: string;
     time: string;
   }
-  export const STEADFAST_URL = 'https://www.steadfast.com.bd/track/consignment/';
-  export const PATHAO_URL = 'https://merchant.pathao.com/api/v1/user/tracking/';
-  export const REDX_URL = 'https://api.redx.com.bd/v1/logistics/global-tracking/';
-  export const PAPERFLY_URL = 'https://go-app.paperfly.com.bd/merchant/api/react/order/track_order.php?order_number=';
+   const STEADFAST_URL = 'https://www.steadfast.com.bd/track/consignment/';
+   const PATHAO_URL = 'https://merchant.pathao.com/api/v1/user/tracking/';
+   const REDX_URL = 'https://api.redx.com.bd/v1/logistics/global-tracking/';
+   const PAPERFLY_URL = 'https://go-app.paperfly.com.bd/merchant/api/react/order/track_order.php?order_number=';
   class CourierTracker {
-     public static extractTrackingNumber(url: string, courier: string): string {
+         public static extractTrackingNumber(url: string, courier: string): string {
           switch (courier) {
             case 'Steadfast':
               return url.replace(STEADFAST_URL, '').split('/')[0];
@@ -67,6 +67,23 @@ export interface TrackingResponse {
           const courier = this.getCourierFromUrl(url);
           const trackingNumber = this.extractTrackingNumber(url, courier);
           return { courier, trackingNumber };
+        }
+        public static async fetchTrackingInfo(url:string){
+           const { courier, trackingNumber } = this.parseTrackingInfo(url);
+           const parsedUrl= this.getTrackingUrl(courier, trackingNumber);
+           // Fetch the tracking info from the URL using axios with no-cors mode
+            const result=await fetch(parsedUrl, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              mode: 'no-cors',
+            })
+            const data=await result.json();
+            const standardizedResponse = this.standardizeResponse(courier, data);
+            return standardizedResponse;
+
+
         }
     // Standardize Paperfly response
     private static standardizePaperfly(response: any): TrackingResponse {
@@ -205,4 +222,5 @@ export interface TrackingResponse {
     // Add more couriers here as needed...
   }
   
-  export default  CourierTracker;
+
+  export default CourierTracker;

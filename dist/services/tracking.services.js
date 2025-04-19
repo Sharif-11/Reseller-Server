@@ -1,19 +1,27 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PAPERFLY_URL = exports.REDX_URL = exports.PATHAO_URL = exports.STEADFAST_URL = void 0;
-exports.STEADFAST_URL = 'https://www.steadfast.com.bd/track/consignment/';
-exports.PATHAO_URL = 'https://merchant.pathao.com/api/v1/user/tracking/';
-exports.REDX_URL = 'https://api.redx.com.bd/v1/logistics/global-tracking/';
-exports.PAPERFLY_URL = 'https://go-app.paperfly.com.bd/merchant/api/react/order/track_order.php?order_number=';
+const STEADFAST_URL = 'https://www.steadfast.com.bd/track/consignment/';
+const PATHAO_URL = 'https://merchant.pathao.com/api/v1/user/tracking/';
+const REDX_URL = 'https://api.redx.com.bd/v1/logistics/global-tracking/';
+const PAPERFLY_URL = 'https://go-app.paperfly.com.bd/merchant/api/react/order/track_order.php?order_number=';
 class CourierTracker {
     static extractTrackingNumber(url, courier) {
         switch (courier) {
             case 'Steadfast':
-                return url.replace(exports.STEADFAST_URL, '').split('/')[0];
+                return url.replace(STEADFAST_URL, '').split('/')[0];
             case 'Pathao':
-                return url.replace(exports.PATHAO_URL, '').split('/')[0];
+                return url.replace(PATHAO_URL, '').split('/')[0];
             case 'Redx':
-                return url.replace(exports.REDX_URL, '').split('/')[0];
+                return url.replace(REDX_URL, '').split('/')[0];
             case 'Paperfly':
                 return new URL(url).searchParams.get('order_number') || '';
             default:
@@ -23,13 +31,13 @@ class CourierTracker {
     static getTrackingUrl(courier, trackingNumber) {
         switch (courier) {
             case 'Steadfast':
-                return `${exports.STEADFAST_URL}${trackingNumber}`;
+                return `${STEADFAST_URL}${trackingNumber}`;
             case 'Pathao':
-                return `${exports.PATHAO_URL}${trackingNumber}`;
+                return `${PATHAO_URL}${trackingNumber}`;
             case 'Redx':
-                return `${exports.REDX_URL}${trackingNumber}`;
+                return `${REDX_URL}${trackingNumber}`;
             case 'Paperfly':
-                return `${exports.PAPERFLY_URL}${trackingNumber}`;
+                return `${PAPERFLY_URL}${trackingNumber}`;
             case 'Sundarban':
                 return `https://www.sundarbancourier.com/track/${trackingNumber}`;
             default:
@@ -37,13 +45,13 @@ class CourierTracker {
         }
     }
     static getCourierFromUrl(url) {
-        if (url.includes(exports.STEADFAST_URL))
+        if (url.includes(STEADFAST_URL))
             return 'Steadfast';
-        if (url.includes(exports.PATHAO_URL))
+        if (url.includes(PATHAO_URL))
             return 'Pathao';
-        if (url.includes(exports.REDX_URL))
+        if (url.includes(REDX_URL))
             return 'Redx';
-        if (url.includes(exports.PAPERFLY_URL))
+        if (url.includes(PAPERFLY_URL))
             return 'Paperfly';
         if (url.includes('sundarbancourier.com'))
             return 'Sundarban';
@@ -53,6 +61,23 @@ class CourierTracker {
         const courier = this.getCourierFromUrl(url);
         const trackingNumber = this.extractTrackingNumber(url, courier);
         return { courier, trackingNumber };
+    }
+    static fetchTrackingInfo(url) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { courier, trackingNumber } = this.parseTrackingInfo(url);
+            const parsedUrl = this.getTrackingUrl(courier, trackingNumber);
+            // Fetch the tracking info from the URL using axios with no-cors mode
+            const result = yield fetch(parsedUrl, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                mode: 'no-cors',
+            });
+            const data = yield result.json();
+            const standardizedResponse = this.standardizeResponse(courier, data);
+            return standardizedResponse;
+        });
     }
     // Standardize Paperfly response
     static standardizePaperfly(response) {
