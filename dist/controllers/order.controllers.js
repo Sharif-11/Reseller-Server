@@ -46,9 +46,16 @@ class OrderController {
                 const order = yield order_services_1.default.approveOrderByAdmin({
                     orderId, transactionId
                 });
+                let message = 'অর্ডার সফলভাবে অনুমোদিত হয়েছে';
+                if (order.orderStatus === 'refunded') {
+                    message = 'বিক্রেতা ইতিমধ্যে এই অর্ডার বাতিল করেছেন বলে টাকা ফেরত দেওয়া হয়েছে';
+                }
+                if (order.orderStatus === 'cancelled') {
+                    message = 'বিক্রেতা ইতিমধ্যে এই অর্ডার বাতিল করেছেন';
+                }
                 res.status(200).json({
                     statusCode: 200,
-                    message: 'অর্ডার সফলভাবে অনুমোদিত হয়েছে',
+                    message,
                     success: true,
                     data: order,
                 });
@@ -147,7 +154,7 @@ class OrderController {
                 const order = yield order_services_1.default.shipOrderByAdmin(orderId, courierName, trackingURL);
                 res.status(200).json({
                     statusCode: 200,
-                    message: 'অর্ডার সফলভাবে শিপ করা হয়েছে',
+                    message: 'অর্ডার সফলভাবে কুরিয়ারে পাঠানো হয়েছে',
                     success: true,
                     data: order,
                 });

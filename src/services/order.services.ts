@@ -104,74 +104,71 @@ class OrderServices {
     
     
    
+     const order = await prisma.order.create({
+      data: {
+        // Seller info (from backend)
+        sellerId,
+        sellerName,
+        sellerPhoneNo,
+        sellerVerified,
+        sellerShopName,
+        sellerBalance,
 
-    // Create order in transaction
-    const newOrder = await prisma.$transaction(async (prisma) => {
-      const order = await prisma.order.create({
-        data: {
-          // Seller info (from backend)
-          sellerId,
-          sellerName,
-          sellerPhoneNo,
-          sellerVerified,
-          sellerShopName,
-          sellerBalance,
+        // Customer info (from frontend)
+        customerName: frontendData.customerName,
+        customerPhoneNo: frontendData.customerPhoneNo,
+        customerZilla: frontendData.customerZilla,
+        customerUpazilla: frontendData.customerUpazilla,
+        deliveryAddress: frontendData.deliveryAddress,
+        comments: frontendData.comments,
 
-          // Customer info (from frontend)
-          customerName: frontendData.customerName,
-          customerPhoneNo: frontendData.customerPhoneNo,
-          customerZilla: frontendData.customerZilla,
-          customerUpazilla: frontendData.customerUpazilla,
-          deliveryAddress: frontendData.deliveryAddress,
-          comments: frontendData.comments,
+        // Payment info
+        deliveryCharge,
+        isDeliveryChargePaidBySeller: frontendData.isDeliveryChargePaidBySeller,
+        deliveryChargeMustBePaidBySeller:amountToPay,
+        deliveryChargePaidBySeller: amountToPay,
+        
+        transactionId: frontendData.transactionId,
+        sellerWalletName: frontendData.sellerWalletName,
+        sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo,
+        // Admin wallet info (from backend)
+        adminWalletId,
+        adminWalletName,
+        adminWalletPhoneNo,
 
-          // Payment info
-          deliveryCharge,
-          isDeliveryChargePaidBySeller: frontendData.isDeliveryChargePaidBySeller,
-          deliveryChargeMustBePaidBySeller:amountToPay,
-          deliveryChargePaidBySeller: amountToPay,
-          
-          transactionId: frontendData.transactionId,
-          sellerWalletName: frontendData.sellerWalletName,
-          sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo,
-          // Admin wallet info (from backend)
-          adminWalletId,
-          adminWalletName,
-          adminWalletPhoneNo,
-
-          // Calculated totals
-          totalAmount,
-          totalCommission,
-          actualCommission,
-          totalProductBasePrice,
-          totalProductSellingPrice,
-          totalProductQuantity,
+        // Calculated totals
+        totalAmount,
+        totalCommission,
+        actualCommission,
+        totalProductBasePrice,
+        totalProductSellingPrice,
+        totalProductQuantity,
 
 
-          // Products
-          orderProducts: {
-            create: enrichedProducts.map(product => ({
-              productId: product.productId,
-              productName: product.productName,
-              productImage: product.productImage,
-              productBasePrice: product.productBasePrice,
-              productSellingPrice: product.productSellingPrice,
-              productQuantity: product.productQuantity,
-              productTotalBasePrice: product.productBasePrice.times(product.productQuantity),
-              productTotalSellingPrice: product.productSellingPrice * product.productQuantity,
-              selectedOptions: product.selectedOptions
-            }))
-          }
-        },
-        include: {
-          orderProducts: true
+        // Products
+        orderProducts: {
+          create: enrichedProducts.map(product => ({
+            productId: product.productId,
+            productName: product.productName,
+            productImage: product.productImage,
+            productBasePrice: product.productBasePrice,
+            productSellingPrice: product.productSellingPrice,
+            productQuantity: product.productQuantity,
+            productTotalBasePrice: product.productBasePrice.times(product.productQuantity),
+            productTotalSellingPrice: product.productSellingPrice * product.productQuantity,
+            selectedOptions: product.selectedOptions
+          }))
         }
-      })
+      },
+      include: {
+        orderProducts: true
+      }
+    });
+    if(!needsPayment){
+      await this.approveOrderByAdmin({orderId:order.orderId})
+    }
 
-      return order
-    })
-
-    return newOrder
+    return order
   }
   /**
    * Get order by ID

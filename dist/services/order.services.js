@@ -78,65 +78,64 @@ class OrderServices {
                 adminWalletName = walletName;
                 adminWalletPhoneNo = walletPhoneNo;
             }
-            // Create order in transaction
-            const newOrder = yield prisma_1.default.$transaction((prisma) => __awaiter(this, void 0, void 0, function* () {
-                const order = yield prisma.order.create({
-                    data: {
-                        // Seller info (from backend)
-                        sellerId,
-                        sellerName,
-                        sellerPhoneNo,
-                        sellerVerified,
-                        sellerShopName,
-                        sellerBalance,
-                        // Customer info (from frontend)
-                        customerName: frontendData.customerName,
-                        customerPhoneNo: frontendData.customerPhoneNo,
-                        customerZilla: frontendData.customerZilla,
-                        customerUpazilla: frontendData.customerUpazilla,
-                        deliveryAddress: frontendData.deliveryAddress,
-                        comments: frontendData.comments,
-                        // Payment info
-                        deliveryCharge,
-                        isDeliveryChargePaidBySeller: frontendData.isDeliveryChargePaidBySeller,
-                        deliveryChargeMustBePaidBySeller: amountToPay,
-                        deliveryChargePaidBySeller: amountToPay,
-                        transactionId: frontendData.transactionId,
-                        sellerWalletName: frontendData.sellerWalletName,
-                        sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo,
-                        // Admin wallet info (from backend)
-                        adminWalletId,
-                        adminWalletName,
-                        adminWalletPhoneNo,
-                        // Calculated totals
-                        totalAmount,
-                        totalCommission,
-                        actualCommission,
-                        totalProductBasePrice,
-                        totalProductSellingPrice,
-                        totalProductQuantity,
-                        // Products
-                        orderProducts: {
-                            create: enrichedProducts.map(product => ({
-                                productId: product.productId,
-                                productName: product.productName,
-                                productImage: product.productImage,
-                                productBasePrice: product.productBasePrice,
-                                productSellingPrice: product.productSellingPrice,
-                                productQuantity: product.productQuantity,
-                                productTotalBasePrice: product.productBasePrice.times(product.productQuantity),
-                                productTotalSellingPrice: product.productSellingPrice * product.productQuantity,
-                                selectedOptions: product.selectedOptions
-                            }))
-                        }
-                    },
-                    include: {
-                        orderProducts: true
+            const order = yield prisma_1.default.order.create({
+                data: {
+                    // Seller info (from backend)
+                    sellerId,
+                    sellerName,
+                    sellerPhoneNo,
+                    sellerVerified,
+                    sellerShopName,
+                    sellerBalance,
+                    // Customer info (from frontend)
+                    customerName: frontendData.customerName,
+                    customerPhoneNo: frontendData.customerPhoneNo,
+                    customerZilla: frontendData.customerZilla,
+                    customerUpazilla: frontendData.customerUpazilla,
+                    deliveryAddress: frontendData.deliveryAddress,
+                    comments: frontendData.comments,
+                    // Payment info
+                    deliveryCharge,
+                    isDeliveryChargePaidBySeller: frontendData.isDeliveryChargePaidBySeller,
+                    deliveryChargeMustBePaidBySeller: amountToPay,
+                    deliveryChargePaidBySeller: amountToPay,
+                    transactionId: frontendData.transactionId,
+                    sellerWalletName: frontendData.sellerWalletName,
+                    sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo,
+                    // Admin wallet info (from backend)
+                    adminWalletId,
+                    adminWalletName,
+                    adminWalletPhoneNo,
+                    // Calculated totals
+                    totalAmount,
+                    totalCommission,
+                    actualCommission,
+                    totalProductBasePrice,
+                    totalProductSellingPrice,
+                    totalProductQuantity,
+                    // Products
+                    orderProducts: {
+                        create: enrichedProducts.map(product => ({
+                            productId: product.productId,
+                            productName: product.productName,
+                            productImage: product.productImage,
+                            productBasePrice: product.productBasePrice,
+                            productSellingPrice: product.productSellingPrice,
+                            productQuantity: product.productQuantity,
+                            productTotalBasePrice: product.productBasePrice.times(product.productQuantity),
+                            productTotalSellingPrice: product.productSellingPrice * product.productQuantity,
+                            selectedOptions: product.selectedOptions
+                        }))
                     }
-                });
-                return order;
-            }));
-            return newOrder;
+                },
+                include: {
+                    orderProducts: true
+                }
+            });
+            if (!needsPayment) {
+                yield this.approveOrderByAdmin({ orderId: order.orderId });
+            }
+            return order;
         });
     }
     /**
