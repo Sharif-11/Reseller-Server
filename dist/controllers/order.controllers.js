@@ -13,6 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const order_services_1 = __importDefault(require("../services/order.services"));
+const tracking_services_1 = __importDefault(require("../services/tracking.services"));
 class OrderController {
     /**
      * Create a new order
@@ -150,7 +151,8 @@ class OrderController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const orderId = +req.params.orderId;
-                const { courierName, trackingURL } = req.body;
+                const { trackingURL } = req.body;
+                const courierName = tracking_services_1.default.getCourierFromUrl(trackingURL);
                 const order = yield order_services_1.default.shipOrderByAdmin(orderId, courierName, trackingURL);
                 res.status(200).json({
                     statusCode: 200,

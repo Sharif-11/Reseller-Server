@@ -2,14 +2,16 @@ import { Router } from "express";
 import orderControllers from "../controllers/order.controllers";
 
 const adminOrdersRoutes = Router();
+adminOrdersRoutes.get(
+  "/", orderControllers.getOrdersForAdmin)
 adminOrdersRoutes.patch(
-  "/approve/:orderId",orderControllers.approveOrder)
+  "/:orderId/approve",orderControllers.approveOrder)
 adminOrdersRoutes.patch(
-  "/cancel/:orderId",orderControllers.cancelOrderByAdmin)
+  "/:orderId/cancel",orderControllers.cancelOrderByAdmin)
 adminOrdersRoutes.patch(
-  "/process/:orderId",orderControllers.processOrder)
-adminOrdersRoutes.patch('/ship/:orderId',orderControllers.shipOrder)
-adminOrdersRoutes.patch('/complete/:orderId',orderControllers.completeOrder)
-adminOrdersRoutes.patch('/reject/:orderId',orderControllers.rejectOrder)
-adminOrdersRoutes.patch('/return/:orderId',orderControllers.returnOrder)
+  "/:orderId/process",orderControllers.processOrder)
+adminOrdersRoutes.patch('/:orderId/ship',orderControllers.shipOrder)
+adminOrdersRoutes.patch('/:orderId/complete',orderControllers.completeOrder)
+adminOrdersRoutes.patch('/:orderId/reject',orderControllers.rejectOrder)
+adminOrdersRoutes.patch('/:orderId/return',orderControllers.returnOrder)
 export default adminOrdersRoutes;

@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express'
 import OrderServices from '../services/order.services'
 import ApiError from '../utils/ApiError'
 import { OrderStatus } from '@prisma/client'
+import CourierTracker from '../services/tracking.services'
 
 class OrderController {
   /**
@@ -128,7 +129,8 @@ class OrderController {
   async shipOrder(req: Request, res: Response, next: NextFunction) {
     try {
       const orderId = +req.params.orderId
-      const {courierName,trackingURL}= req.body
+      const {trackingURL}= req.body
+      const courierName = CourierTracker.getCourierFromUrl(trackingURL)
       const order = await OrderServices.shipOrderByAdmin(orderId,courierName,trackingURL)
       res.status(200).json({
         statusCode: 200,
