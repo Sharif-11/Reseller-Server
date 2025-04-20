@@ -17,7 +17,7 @@ class TrackingController {
     getTrackingInfo(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { url } = req.body;
+                const { url } = req.query;
                 const trackingInfo = yield tracking_services_1.default.fetchTrackingInfo(url);
                 res.status(200).json({
                     statusCode: 200,

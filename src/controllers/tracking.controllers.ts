@@ -5,9 +5,9 @@ class TrackingController{
 
     async getTrackingInfo(req: Request, res: Response, next: NextFunction) {
         try {
-            const { url } = req.body;
+            const { url } = req.query;
          
-            const trackingInfo = await CourierTracker.fetchTrackingInfo(url);
+            const trackingInfo = await CourierTracker.fetchTrackingInfo(url as string);
             res.status(200).json({
                 statusCode: 200,
                 message: 'Tracking info fetched successfully',
