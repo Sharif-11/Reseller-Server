@@ -607,7 +607,7 @@ class TransactionService {
           transactionId,
           paymentPhoneNo,
           type: 'Debit',
-          reason: 'Withdraw',
+          reason: 'ব্যালেন্স উত্তোলন',
           remarks,
         },
       })
