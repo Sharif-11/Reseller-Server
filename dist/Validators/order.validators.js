@@ -38,29 +38,6 @@ exports.validateCreateOrder = [
         .trim()
         .isLength({ max: 512 })
         .withMessage('মন্তব্য আরও ছোট হতে হবে।'),
-    (0, express_validator_1.body)('products')
-        .isArray({ min: 1 })
-        .withMessage('অন্তত একটি পণ্য প্রয়োজন।'),
-    (0, express_validator_1.body)('products.*.productId')
-        .isInt({ min: 1 })
-        .withMessage('পণ্য আইডি সঠিক নয়।'),
-    (0, express_validator_1.body)('products.*.productQuantity')
-        .isInt({ min: 1 })
-        .withMessage('পণ্যের পরিমাণ সঠিক নয়।'),
-    (0, express_validator_1.body)('products.*.productImage')
-        .trim()
-        .notEmpty()
-        .withMessage('পণ্যের ছবি প্রয়োজন।')
-        .isURL()
-        .withMessage('পণ্যের ছবির URL সঠিক নয়।'),
-    (0, express_validator_1.body)('products.*.productSellingPrice')
-        .isFloat({ min: 0 })
-        .withMessage('পণ্যের বিক্রয় মূল্য সঠিক নয়।'),
-    (0, express_validator_1.body)('products.*.selectedOptions')
-        .optional()
-        .trim()
-        .isLength({ max: 255 })
-        .withMessage('নির্বাচিত অপশনগুলি আরও ছোট হতে হবে।'),
     (0, express_validator_1.body)('isDeliveryChargePaidBySeller')
         .isBoolean()
         .withMessage('ডেলিভারি চার্জ প্রদানের তথ্য সঠিক নয়।'),
