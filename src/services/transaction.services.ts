@@ -157,6 +157,14 @@ class TransactionService {
       }),
       prisma.transaction.count({ where: { userId } }),
     ])
+     const totalCredit= await prisma.transaction.aggregate({
+      where: { userId, type: 'Credit' },
+      _sum: { amount: true },
+    })
+    const totalDebit= await prisma.transaction.aggregate({
+      where: { userId, type: 'Debit' },
+      _sum: { amount: true },
+    })
 
     return {
       transactionList,
@@ -164,6 +172,9 @@ class TransactionService {
       currentPage: page,
       pageSize,
       totalPages: Math.ceil(total / pageSize),
+      totalCredit: totalCredit._sum.amount || 0,
+      totalDebit: totalDebit._sum.amount || 0,
+      calculatedBalance: Number(totalCredit?._sum.amount || 0) - Number(totalDebit._sum.amount || 0),  
     }
   }
 

@@ -36,8 +36,11 @@ class OrderServices {
             // [Backend Fetching Needed] Get admin wallet info
             // [Backend Fetching Needed] Get product details (name, image, base price) for each product
             const enrichedProductsPromise = frontendData.products.map((product) => __awaiter(this, void 0, void 0, function* () {
-                const { productId, name: productName, basePrice: productBasePrice, images } = yield product_services_1.default.getProduct(product.productId);
+                const { productId, name: productName, basePrice: productBasePrice, images, published } = yield product_services_1.default.getProduct(product.productId);
                 const isValidImage = images.some((image) => image.imageUrl === product.productImage);
+                if (!published) {
+                    throw new ApiError_1.default(400, 'Hidden product cannot be ordered');
+                }
                 if (!isValidImage) {
                     throw new ApiError_1.default(400, 'Invalid product image');
                 }
@@ -71,6 +74,7 @@ class OrderServices {
                         transactionId: frontendData.transactionId,
                     }
                 });
+                console.log('existingTransactionId', existingTransactionId);
                 if (existingTransactionId) {
                     throw new ApiError_1.default(400, 'Transaction ID already exists');
                 }
@@ -78,70 +82,75 @@ class OrderServices {
                 adminWalletName = walletName;
                 adminWalletPhoneNo = walletPhoneNo;
             }
-            const order = yield prisma_1.default.order.create({
-                data: {
-                    // Seller info (from backend)
-                    sellerId,
-                    sellerName,
-                    sellerPhoneNo,
-                    sellerVerified,
-                    sellerShopName,
-                    sellerBalance,
-                    // Customer info (from frontend)
-                    customerName: frontendData.customerName,
-                    customerPhoneNo: frontendData.customerPhoneNo,
-                    customerZilla: frontendData.customerZilla,
-                    customerUpazilla: frontendData.customerUpazilla,
-                    deliveryAddress: frontendData.deliveryAddress,
-                    comments: frontendData.comments,
-                    // Payment info
-                    deliveryCharge,
-                    isDeliveryChargePaidBySeller: frontendData.isDeliveryChargePaidBySeller,
-                    deliveryChargeMustBePaidBySeller: amountToPay,
-                    deliveryChargePaidBySeller: amountToPay,
-                    transactionId: frontendData.transactionId,
-                    sellerWalletName: frontendData.sellerWalletName,
-                    sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo,
-                    // Admin wallet info (from backend)
-                    adminWalletId,
-                    adminWalletName,
-                    adminWalletPhoneNo,
-                    // Calculated totals
-                    totalAmount,
-                    totalCommission,
-                    actualCommission,
-                    totalProductBasePrice,
-                    totalProductSellingPrice,
-                    totalProductQuantity,
-                    // Products
-                    orderProducts: {
-                        create: enrichedProducts.map(product => ({
-                            productId: product.productId,
-                            productName: product.productName,
-                            productImage: product.productImage,
-                            productBasePrice: product.productBasePrice,
-                            productSellingPrice: product.productSellingPrice,
-                            productQuantity: product.productQuantity,
-                            productTotalBasePrice: product.productBasePrice.times(product.productQuantity),
-                            productTotalSellingPrice: product.productSellingPrice * product.productQuantity,
-                            selectedOptions: product.selectedOptions
-                        }))
+            try {
+                const order = yield prisma_1.default.order.create({
+                    data: {
+                        // Seller info (from backend)
+                        sellerId,
+                        sellerName,
+                        sellerPhoneNo,
+                        sellerVerified,
+                        sellerShopName,
+                        sellerBalance,
+                        // Customer info (from frontend)
+                        customerName: frontendData.customerName,
+                        customerPhoneNo: frontendData.customerPhoneNo,
+                        customerZilla: frontendData.customerZilla,
+                        customerUpazilla: frontendData.customerUpazilla,
+                        deliveryAddress: frontendData.deliveryAddress,
+                        comments: frontendData.comments,
+                        // Payment info
+                        deliveryCharge,
+                        isDeliveryChargePaidBySeller: frontendData.isDeliveryChargePaidBySeller,
+                        deliveryChargeMustBePaidBySeller: amountToPay,
+                        deliveryChargePaidBySeller: amountToPay,
+                        transactionId: frontendData.transactionId,
+                        sellerWalletName: frontendData.sellerWalletName,
+                        sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo,
+                        // Admin wallet info (from backend)
+                        adminWalletId,
+                        adminWalletName,
+                        adminWalletPhoneNo,
+                        // Calculated totals
+                        totalAmount,
+                        totalCommission,
+                        actualCommission,
+                        totalProductBasePrice,
+                        totalProductSellingPrice,
+                        totalProductQuantity,
+                        // Products
+                        orderProducts: {
+                            create: enrichedProducts.map(product => ({
+                                productId: product.productId,
+                                productName: product.productName,
+                                productImage: product.productImage,
+                                productBasePrice: product.productBasePrice,
+                                productSellingPrice: product.productSellingPrice,
+                                productQuantity: product.productQuantity,
+                                productTotalBasePrice: product.productBasePrice.times(product.productQuantity),
+                                productTotalSellingPrice: product.productSellingPrice * product.productQuantity,
+                                selectedOptions: product.selectedOptions
+                            }))
+                        }
+                    },
+                    include: {
+                        orderProducts: true
                     }
-                },
-                include: {
-                    orderProducts: true
+                });
+                if (!needsPayment) {
+                    try {
+                        yield this.approveOrderByAdmin({ orderId: order.orderId });
+                    }
+                    catch (error) {
+                        // handle error
+                        console.log('Error approving order:', error);
+                    }
                 }
-            });
-            if (!needsPayment) {
-                try {
-                    yield this.approveOrderByAdmin({ orderId: order.orderId });
-                }
-                catch (error) {
-                    // handle error
-                    console.log('Error approving order:', error);
-                }
+                return order;
             }
-            return order;
+            catch (error) {
+                throw new ApiError_1.default(500, 'Failed to create order');
+            }
         });
     }
     /**

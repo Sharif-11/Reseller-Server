@@ -46,8 +46,11 @@ class OrderServices {
   
     // [Backend Fetching Needed] Get product details (name, image, base price) for each product
     const enrichedProductsPromise = frontendData.products.map( async(product) => {
-      const {productId,name:productName,basePrice:productBasePrice,images}=await productServices.getProduct(product.productId)
+      const {productId,name:productName,basePrice:productBasePrice,images,published}=await productServices.getProduct(product.productId)
       const isValidImage=images.some((image)=>image.imageUrl===product.productImage)
+      if(!published){
+        throw new ApiError(400,'Hidden product cannot be ordered')
+      }
       if(!isValidImage){
         throw new ApiError(400,'Invalid product image')
       }
@@ -85,6 +88,7 @@ class OrderServices {
      let adminWalletPhoneNo=null;
 
      if(needsPayment && frontendData.isDeliveryChargePaidBySeller){
+      
       const {walletId,walletName,walletPhoneNo} = await walletServices.getWalletById(frontendData.adminWalletId)
 
       const existingTransactionId = await prisma.order.findFirst({
@@ -93,6 +97,7 @@ class OrderServices {
          
         }
       })
+      console.log('existingTransactionId',existingTransactionId)
   
       if(existingTransactionId) {
         throw new ApiError(400, 'Transaction ID already exists')
@@ -104,77 +109,81 @@ class OrderServices {
     
     
    
-     const order = await prisma.order.create({
-      data: {
-        // Seller info (from backend)
-        sellerId,
-        sellerName,
-        sellerPhoneNo,
-        sellerVerified,
-        sellerShopName,
-        sellerBalance,
-
-        // Customer info (from frontend)
-        customerName: frontendData.customerName,
-        customerPhoneNo: frontendData.customerPhoneNo,
-        customerZilla: frontendData.customerZilla,
-        customerUpazilla: frontendData.customerUpazilla,
-        deliveryAddress: frontendData.deliveryAddress,
-        comments: frontendData.comments,
-
-        // Payment info
-        deliveryCharge,
-        isDeliveryChargePaidBySeller: frontendData.isDeliveryChargePaidBySeller,
-        deliveryChargeMustBePaidBySeller:amountToPay,
-        deliveryChargePaidBySeller: amountToPay,
-        
-        transactionId: frontendData.transactionId,
-        sellerWalletName: frontendData.sellerWalletName,
-        sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo,
-        // Admin wallet info (from backend)
-        adminWalletId,
-        adminWalletName,
-        adminWalletPhoneNo,
-
-        // Calculated totals
-        totalAmount,
-        totalCommission,
-        actualCommission,
-        totalProductBasePrice,
-        totalProductSellingPrice,
-        totalProductQuantity,
-
-
-        // Products
-        orderProducts: {
-          create: enrichedProducts.map(product => ({
-            productId: product.productId,
-            productName: product.productName,
-            productImage: product.productImage,
-            productBasePrice: product.productBasePrice,
-            productSellingPrice: product.productSellingPrice,
-            productQuantity: product.productQuantity,
-            productTotalBasePrice: product.productBasePrice.times(product.productQuantity),
-            productTotalSellingPrice: product.productSellingPrice * product.productQuantity,
-            selectedOptions: product.selectedOptions
-          }))
+      try {
+        const order = await prisma.order.create({
+          data: {
+            // Seller info (from backend)
+            sellerId,
+            sellerName,
+            sellerPhoneNo,
+            sellerVerified,
+            sellerShopName,
+            sellerBalance,
+    
+            // Customer info (from frontend)
+            customerName: frontendData.customerName,
+            customerPhoneNo: frontendData.customerPhoneNo,
+            customerZilla: frontendData.customerZilla,
+            customerUpazilla: frontendData.customerUpazilla,
+            deliveryAddress: frontendData.deliveryAddress,
+            comments: frontendData.comments,
+    
+            // Payment info
+            deliveryCharge,
+            isDeliveryChargePaidBySeller: frontendData.isDeliveryChargePaidBySeller,
+            deliveryChargeMustBePaidBySeller:amountToPay,
+            deliveryChargePaidBySeller: amountToPay,
+            
+            transactionId: frontendData.transactionId,
+            sellerWalletName: frontendData.sellerWalletName,
+            sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo,
+            // Admin wallet info (from backend)
+            adminWalletId,
+            adminWalletName,
+            adminWalletPhoneNo,
+    
+            // Calculated totals
+            totalAmount,
+            totalCommission,
+            actualCommission,
+            totalProductBasePrice,
+            totalProductSellingPrice,
+            totalProductQuantity,
+    
+    
+            // Products
+            orderProducts: {
+              create: enrichedProducts.map(product => ({
+                productId: product.productId,
+                productName: product.productName,
+                productImage: product.productImage,
+                productBasePrice: product.productBasePrice,
+                productSellingPrice: product.productSellingPrice,
+                productQuantity: product.productQuantity,
+                productTotalBasePrice: product.productBasePrice.times(product.productQuantity),
+                productTotalSellingPrice: product.productSellingPrice * product.productQuantity,
+                selectedOptions: product.selectedOptions
+              }))
+            }
+          },
+          include: {
+            orderProducts: true
+          }
+        });
+        if(!needsPayment){
+            try{
+              await this.approveOrderByAdmin({orderId:order.orderId})
+            }
+            catch(error){
+              // handle error
+              console.log('Error approving order:',error)
+            }
         }
-      },
-      include: {
-        orderProducts: true
+    
+        return order
+      } catch (error) {
+           throw new ApiError(500,'Failed to create order')
       }
-    });
-    if(!needsPayment){
-        try{
-          await this.approveOrderByAdmin({orderId:order.orderId})
-        }
-        catch(error){
-          // handle error
-          console.log('Error approving order:',error)
-        }
-    }
-
-    return order
   }
   /**
    * Get order by ID

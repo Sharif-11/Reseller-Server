@@ -125,12 +125,23 @@ class TransactionService {
                 }),
                 prisma_1.default.transaction.count({ where: { userId } }),
             ]);
+            const totalCredit = yield prisma_1.default.transaction.aggregate({
+                where: { userId, type: 'Credit' },
+                _sum: { amount: true },
+            });
+            const totalDebit = yield prisma_1.default.transaction.aggregate({
+                where: { userId, type: 'Debit' },
+                _sum: { amount: true },
+            });
             return {
                 transactionList,
                 totalTransactions: total,
                 currentPage: page,
                 pageSize,
                 totalPages: Math.ceil(total / pageSize),
+                totalCredit: totalCredit._sum.amount || 0,
+                totalDebit: totalDebit._sum.amount || 0,
+                calculatedBalance: Number((totalCredit === null || totalCredit === void 0 ? void 0 : totalCredit._sum.amount) || 0) - Number(totalDebit._sum.amount || 0),
             };
         });
     }
