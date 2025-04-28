@@ -1,11 +1,11 @@
 import Decimal from 'decimal.js'
 import config from '../config'
+import { WalletName } from '../types/withdraw.types'
 import ApiError from '../utils/ApiError'
 import prisma from '../utils/prisma'
+import { calculateWithdrawal } from '../utils/withdraw.utils'
 import SmsServices from './sms.services'
 import transactionServices from './transaction.services'
-import { calculateWithdrawal } from '../utils/withdraw.utils'
-import { WalletName } from '../types/withdraw.types'
 
 class WithdrawRequestServices {
   /**
@@ -81,7 +81,7 @@ class WithdrawRequestServices {
     if (existingRequest) {
       throw new ApiError(400, 'You already have a pending withdrawal request.')
     }
-    const {actualAmount, transactionFee} = calculateWithdrawal({
+    const { actualAmount, transactionFee } = calculateWithdrawal({
       walletName,
       walletPhoneNo,
       amount: decimalAmount.toNumber(),
@@ -125,13 +125,13 @@ class WithdrawRequestServices {
   }) {
     const skip = (page - 1) * pageSize
 
-    const filter:Record<string,string> = {
+    const filter: Record<string, string> = {
       userId,
     }
     if (status) {
       filter['status'] = status
     }
-    const requests=  prisma.withdrawRequest.findMany({
+    const requests = prisma.withdrawRequest.findMany({
       where: filter,
       orderBy: {
         requestedAt: 'desc',
@@ -142,19 +142,17 @@ class WithdrawRequestServices {
     const totalRequests = prisma.withdrawRequest.count({
       where: filter,
     })
-    const [paginationRequest,overallRequests] = await Promise.all([requests, totalRequests])
+    const [paginationRequest, overallRequests] = await Promise.all([
+      requests,
+      totalRequests,
+    ])
     return {
-      requests:paginationRequest,
+      requests: paginationRequest,
       totalRequests: overallRequests,
       currentPage: page,
       pageSize,
-      totalPages: Math.ceil(
-        overallRequests/ pageSize
-      ),
+      totalPages: Math.ceil(overallRequests / pageSize),
     }
-
-   
-    
   }
 
   /**

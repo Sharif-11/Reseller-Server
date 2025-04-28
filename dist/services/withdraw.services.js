@@ -16,9 +16,9 @@ const decimal_js_1 = __importDefault(require("decimal.js"));
 const config_1 = __importDefault(require("../config"));
 const ApiError_1 = __importDefault(require("../utils/ApiError"));
 const prisma_1 = __importDefault(require("../utils/prisma"));
+const withdraw_utils_1 = require("../utils/withdraw.utils");
 const sms_services_1 = __importDefault(require("./sms.services"));
 const transaction_services_1 = __importDefault(require("./transaction.services"));
-const withdraw_utils_1 = require("../utils/withdraw.utils");
 class WithdrawRequestServices {
     /**
      * Create a new withdraw request
@@ -127,7 +127,10 @@ class WithdrawRequestServices {
             const totalRequests = prisma_1.default.withdrawRequest.count({
                 where: filter,
             });
-            const [paginationRequest, overallRequests] = yield Promise.all([requests, totalRequests]);
+            const [paginationRequest, overallRequests] = yield Promise.all([
+                requests,
+                totalRequests,
+            ]);
             return {
                 requests: paginationRequest,
                 totalRequests: overallRequests,
