@@ -1,32 +1,39 @@
 import { Prisma } from '@prisma/client'
 import { HttpStatusCode } from 'axios'
 import ApiError from '../utils/ApiError'
+import prisma from '../utils/prisma'
+import userServices from './user.services'
+import walletServices from './wallet.services'
 
 class PaymentService {
   async createDuePaymentRequest({
-    tx,
     adminWalletId,
     amount,
     transactionId,
     sellerWalletName,
     sellerWalletPhoneNo,
-    sellerName,
-    sellerPhoneNo,
-    adminWalletName,
-    adminWalletPhoneNo,
+    sellerId,
   }: {
-    tx: Prisma.TransactionClient
     amount: number
     transactionId: string
     sellerWalletName: string
     sellerWalletPhoneNo: string
-    sellerName: string
-    sellerPhoneNo: string
     adminWalletId: number
-    adminWalletName: string
-    adminWalletPhoneNo: string
+    sellerId: string
   }) {
-    const duePaymentRequest = await tx.payment.create({
+    const adminWallet = await walletServices.getWalletById(adminWalletId)
+    if (!adminWallet) {
+      throw new ApiError(HttpStatusCode.BadRequest, 'Admin wallet not found')
+    }
+    const adminWalletName = adminWallet.walletName
+    const adminWalletPhoneNo = adminWallet.walletPhoneNo
+    const seller = await userServices.getUserByUserId(sellerId)
+    if (!seller) {
+      throw new ApiError(HttpStatusCode.BadRequest, 'Seller not found')
+    }
+    const sellerName = seller.name
+    const sellerPhoneNo = seller.phoneNo
+    const duePaymentRequest = await prisma.payment.create({
       data: {
         amount,
         transactionId,
@@ -133,12 +140,12 @@ class PaymentService {
     amount,
     transactionId,
   }: {
-    tx: Prisma.TransactionClient
+    tx?: Prisma.TransactionClient
     paymentId: number
     transactionId: string
     amount: number
   }) {
-    const existingPayment = await tx.payment.findUnique({
+    const existingPayment = await (tx || prisma).payment.findUnique({
       where: { paymentId },
     })
     if (!existingPayment) {
@@ -156,7 +163,7 @@ class PaymentService {
         'Transaction ID does not match the existing payment request'
       )
     }
-    const updatedPayment = await tx.payment.update({
+    const updatedPayment = await (tx || prisma).payment.update({
       where: { paymentId },
       data: {
         paymentStatus: 'verified',

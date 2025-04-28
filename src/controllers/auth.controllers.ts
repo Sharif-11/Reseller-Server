@@ -47,7 +47,7 @@ class AuthController {
   async checkIfAlreadyLoggedIn(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ) {
     try {
       const userId = req?.user?.userId
@@ -71,13 +71,13 @@ class AuthController {
   async loginWithPhoneNoAndPassword(
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ) {
     try {
       const { phoneNo, password } = req.body
       const { user, token } = await AuthServices.loginWithPhoneNoAndPassword(
         phoneNo,
-        password,
+        password
       )
       const { password: _, referredByPhone: __, ...userWithoutPassword } = user
       res.cookie('token', token, { httpOnly: true })
@@ -156,7 +156,7 @@ class AuthController {
       const updates = req.body
       const updatedUser = await AuthServices.updateProfile(
         userId as string,
-        updates,
+        updates
       )
       const { password, ...user } = updatedUser
       res.status(200).json({
@@ -180,7 +180,7 @@ class AuthController {
       const updatedUser = await AuthServices.updatePassword(
         userId as string,
         currentPassword,
-        newPassword,
+        newPassword
       )
       const { password, ...user } = updatedUser
       res.status(200).json({
@@ -203,7 +203,7 @@ class AuthController {
       const { referralCode } = req.body
       const updatedUser = await AuthServices.addReferralCode(
         userId as string,
-        referralCode,
+        referralCode
       )
       res.status(200).json({
         statusCode: 200,
@@ -248,7 +248,7 @@ class AuthController {
       const users = await AuthServices.getAllUsers(
         filters,
         Number(page),
-        Number(pageSize),
+        Number(pageSize)
       )
       res.status(200).json({
         statusCode: 200,

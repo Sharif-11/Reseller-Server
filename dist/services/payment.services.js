@@ -14,10 +14,25 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const axios_1 = require("axios");
 const ApiError_1 = __importDefault(require("../utils/ApiError"));
+const prisma_1 = __importDefault(require("../utils/prisma"));
+const user_services_1 = __importDefault(require("./user.services"));
+const wallet_services_1 = __importDefault(require("./wallet.services"));
 class PaymentService {
     createDuePaymentRequest(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ tx, adminWalletId, amount, transactionId, sellerWalletName, sellerWalletPhoneNo, sellerName, sellerPhoneNo, adminWalletName, adminWalletPhoneNo, }) {
-            const duePaymentRequest = yield tx.payment.create({
+        return __awaiter(this, arguments, void 0, function* ({ adminWalletId, amount, transactionId, sellerWalletName, sellerWalletPhoneNo, sellerId, }) {
+            const adminWallet = yield wallet_services_1.default.getWalletById(adminWalletId);
+            if (!adminWallet) {
+                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Admin wallet not found');
+            }
+            const adminWalletName = adminWallet.walletName;
+            const adminWalletPhoneNo = adminWallet.walletPhoneNo;
+            const seller = yield user_services_1.default.getUserByUserId(sellerId);
+            if (!seller) {
+                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Seller not found');
+            }
+            const sellerName = seller.name;
+            const sellerPhoneNo = seller.phoneNo;
+            const duePaymentRequest = yield prisma_1.default.payment.create({
                 data: {
                     amount,
                     transactionId,
@@ -79,7 +94,7 @@ class PaymentService {
     }
     verifyPaymentRequest(_a) {
         return __awaiter(this, arguments, void 0, function* ({ tx, paymentId, amount, transactionId, }) {
-            const existingPayment = yield tx.payment.findUnique({
+            const existingPayment = yield (tx || prisma_1.default).payment.findUnique({
                 where: { paymentId },
             });
             if (!existingPayment) {
@@ -91,7 +106,7 @@ class PaymentService {
             if (transactionId !== existingPayment.transactionId) {
                 throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Transaction ID does not match the existing payment request');
             }
-            const updatedPayment = yield tx.payment.update({
+            const updatedPayment = yield (tx || prisma_1.default).payment.update({
                 where: { paymentId },
                 data: {
                     paymentStatus: 'verified',
