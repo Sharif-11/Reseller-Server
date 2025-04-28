@@ -33,6 +33,16 @@ class PaymentService {
     }
     const sellerName = seller.name
     const sellerPhoneNo = seller.phoneNo
+    //check unique transactionId
+    const existingTransaction = await prisma.payment.findUnique({
+      where: { transactionId },
+    })
+    if (existingTransaction) {
+      throw new ApiError(
+        HttpStatusCode.BadRequest,
+        'Transaction ID already exists'
+      )
+    }
     const duePaymentRequest = await prisma.payment.create({
       data: {
         amount,

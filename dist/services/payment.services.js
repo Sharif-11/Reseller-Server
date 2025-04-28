@@ -32,6 +32,13 @@ class PaymentService {
             }
             const sellerName = seller.name;
             const sellerPhoneNo = seller.phoneNo;
+            //check unique transactionId
+            const existingTransaction = yield prisma_1.default.payment.findUnique({
+                where: { transactionId },
+            });
+            if (existingTransaction) {
+                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Transaction ID already exists');
+            }
             const duePaymentRequest = yield prisma_1.default.payment.create({
                 data: {
                     amount,
