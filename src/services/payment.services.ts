@@ -226,11 +226,13 @@ class PaymentService {
   async rejectPaymentRequest({
     tx,
     paymentId,
+    remarks,
   }: {
-    tx: Prisma.TransactionClient
+    tx?: Prisma.TransactionClient
     paymentId: number
+    remarks?: string
   }) {
-    const existingPayment = await tx.payment.findUnique({
+    const existingPayment = await (tx || prisma).payment.findUnique({
       where: { paymentId },
     })
     if (!existingPayment) {
@@ -242,13 +244,44 @@ class PaymentService {
         'Only pending payment requests can be rejected'
       )
     }
-    return await tx.payment.update({
+    return await (tx || prisma).payment.update({
       where: { paymentId },
       data: {
         paymentStatus: 'rejected',
         transactionId: null,
+        remarks,
       },
     })
+  }
+  async getAllPaymentsOfASeller({
+    userId,
+    page,
+    limit,
+    status,
+  }: {
+    userId: string
+    page: number
+    limit: number
+    status?: string
+  }) {
+    const payments = await prisma.payment.findMany({
+      where: {
+        sellerId: userId,
+        ...(status && { paymentStatus: status as any }),
+      },
+      orderBy: { paymentDate: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    })
+    const totalPayments = await prisma.payment.count({
+      where: { sellerId: userId },
+    })
+    return {
+      payments,
+      totalPayments,
+      currentPage: page,
+      totalPages: Math.ceil(totalPayments / limit),
+    }
   }
 }
 export default new PaymentService()

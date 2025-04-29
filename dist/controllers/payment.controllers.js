@@ -61,5 +61,50 @@ class PaymentController {
             }
         });
     }
+    getAllPaymentsOfASeller(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+                const { page, limit, status } = req.query;
+                const payments = yield payment_services_1.default.getAllPaymentsOfASeller({
+                    userId: userId,
+                    page: Number(page) || 1,
+                    limit: Number(limit) || 10,
+                    status,
+                });
+                res.status(axios_1.HttpStatusCode.Ok).json({
+                    statusCode: axios_1.HttpStatusCode.Ok,
+                    success: true,
+                    message: 'Payments fetched successfully',
+                    data: payments,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    rejectPaymentRequest(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { paymentId } = req.params;
+                const { remarks } = req.body;
+                const payment = yield payment_services_1.default.rejectPaymentRequest({
+                    paymentId: Number(paymentId),
+                    remarks,
+                });
+                res.status(axios_1.HttpStatusCode.Accepted).json({
+                    statusCode: axios_1.HttpStatusCode.Accepted,
+                    success: true,
+                    message: 'Payment request rejected successfully',
+                    data: payment,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
 }
 exports.default = new PaymentController();

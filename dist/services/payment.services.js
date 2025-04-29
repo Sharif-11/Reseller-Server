@@ -156,8 +156,8 @@ class PaymentService {
         });
     }
     rejectPaymentRequest(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ tx, paymentId, }) {
-            const existingPayment = yield tx.payment.findUnique({
+        return __awaiter(this, arguments, void 0, function* ({ tx, paymentId, remarks, }) {
+            const existingPayment = yield (tx || prisma_1.default).payment.findUnique({
                 where: { paymentId },
             });
             if (!existingPayment) {
@@ -166,13 +166,33 @@ class PaymentService {
             if (existingPayment.paymentStatus !== 'pending') {
                 throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Only pending payment requests can be rejected');
             }
-            return yield tx.payment.update({
+            return yield (tx || prisma_1.default).payment.update({
                 where: { paymentId },
                 data: {
                     paymentStatus: 'rejected',
                     transactionId: null,
+                    remarks,
                 },
             });
+        });
+    }
+    getAllPaymentsOfASeller(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ userId, page, limit, status, }) {
+            const payments = yield prisma_1.default.payment.findMany({
+                where: Object.assign({ sellerId: userId }, (status && { paymentStatus: status })),
+                orderBy: { paymentDate: 'desc' },
+                skip: (page - 1) * limit,
+                take: limit,
+            });
+            const totalPayments = yield prisma_1.default.payment.count({
+                where: { sellerId: userId },
+            });
+            return {
+                payments,
+                totalPayments,
+                currentPage: page,
+                totalPages: Math.ceil(totalPayments / limit),
+            };
         });
     }
 }

@@ -55,5 +55,47 @@ class PaymentController {
       next(error)
     }
   }
+  async getAllPaymentsOfASeller(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const userId = req.user?.userId
+      const { page, limit, status } = req.query
+      const payments = await paymentServices.getAllPaymentsOfASeller({
+        userId: userId as string,
+        page: Number(page) || 1,
+        limit: Number(limit) || 10,
+        status,
+      })
+      res.status(HttpStatusCode.Ok).json({
+        statusCode: HttpStatusCode.Ok,
+        success: true,
+        message: 'Payments fetched successfully',
+        data: payments,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  async rejectPaymentRequest(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { paymentId } = req.params
+      const { remarks } = req.body
+      const payment = await paymentServices.rejectPaymentRequest({
+        paymentId: Number(paymentId),
+        remarks,
+      })
+      res.status(HttpStatusCode.Accepted).json({
+        statusCode: HttpStatusCode.Accepted,
+        success: true,
+        message: 'Payment request rejected successfully',
+        data: payment,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
 }
 export default new PaymentController()

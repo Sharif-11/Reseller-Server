@@ -3,6 +3,7 @@ import paymentControllers from '../controllers/payment.controllers'
 
 const sellerPaymentRoutes = Router()
 const adminPaymentRoutes = Router()
+sellerPaymentRoutes.get('/', paymentControllers.getAllPaymentsOfASeller)
 sellerPaymentRoutes.post('/due', paymentControllers.createDuePayment)
 adminPaymentRoutes.patch(
   '/due/:paymentId',
