@@ -23,7 +23,7 @@ class PaymentController {
                 const { amount, transactionId, adminWalletId, sellerWalletName, sellerWalletPhoneNo, } = req.body;
                 const newPayment = yield payment_services_1.default.createDuePaymentRequest({
                     amount,
-                    transactionId,
+                    transactionId: String(transactionId).trim(),
                     sellerWalletName,
                     sellerWalletPhoneNo,
                     adminWalletId,

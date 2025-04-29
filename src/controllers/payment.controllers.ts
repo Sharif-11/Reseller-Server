@@ -13,9 +13,10 @@ class PaymentController {
         sellerWalletName,
         sellerWalletPhoneNo,
       } = req.body
+
       const newPayment = await paymentServices.createDuePaymentRequest({
         amount,
-        transactionId,
+        transactionId: String(transactionId).trim(),
         sellerWalletName,
         sellerWalletPhoneNo,
         adminWalletId,
