@@ -289,11 +289,14 @@ model Payment {
 
   sellerName    String
   sellerPhoneNo String
+  sellerId      String
 
   transactionId String? @unique
   amount        Decimal @db.Decimal(15, 2)
 
   remarks String? // Optional remarks for the payment
+
+  @@map("payments")
 }
 
 enum OrderStatus {

@@ -43,6 +43,19 @@ class PaymentService {
         'Transaction ID already exists'
       )
     }
+    const existingPaymentRequest = await prisma.payment.findFirst({
+      where: {
+        sellerPhoneNo,
+        paymentType: 'DuePayment',
+        paymentStatus: 'pending',
+      },
+    })
+    if (existingPaymentRequest) {
+      throw new ApiError(
+        HttpStatusCode.BadRequest,
+        'Pending payment request already exists for this seller'
+      )
+    }
     const duePaymentRequest = await prisma.payment.create({
       data: {
         amount,
@@ -56,6 +69,7 @@ class PaymentService {
         adminWalletPhoneNo,
         sender: 'Seller',
         paymentType: 'DuePayment',
+        sellerId,
       },
     })
     return duePaymentRequest
@@ -72,6 +86,7 @@ class PaymentService {
     adminWalletName,
     adminWalletPhoneNo,
     orderId,
+    sellerId,
   }: {
     tx: Prisma.TransactionClient
     amount: number
@@ -84,6 +99,7 @@ class PaymentService {
     adminWalletName: string
     adminWalletPhoneNo: string
     orderId: number
+    sellerId: string
   }) {
     const orderPaymentRequest = await tx.payment.create({
       data: {
@@ -99,6 +115,7 @@ class PaymentService {
         orderId,
         sender: 'Seller',
         paymentType: 'OrderPayment',
+        sellerId,
       },
     })
     return orderPaymentRequest
@@ -114,6 +131,7 @@ class PaymentService {
     adminWalletId,
     adminWalletName,
     adminWalletPhoneNo,
+    sellerId,
   }: {
     tx: Prisma.TransactionClient
     amount: number
@@ -125,6 +143,7 @@ class PaymentService {
     adminWalletId: number
     adminWalletName: string
     adminWalletPhoneNo: string
+    sellerId: string
   }) {
     const withdrawPaymentRequest = await tx.payment.create({
       data: {
@@ -140,6 +159,7 @@ class PaymentService {
         sender: 'Admin',
         paymentType: 'WithdrawPayment',
         paymentStatus: 'verified',
+        sellerId,
       },
     })
     return withdrawPaymentRequest

@@ -39,6 +39,16 @@ class PaymentService {
             if (existingTransaction) {
                 throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Transaction ID already exists');
             }
+            const existingPaymentRequest = yield prisma_1.default.payment.findFirst({
+                where: {
+                    sellerPhoneNo,
+                    paymentType: 'DuePayment',
+                    paymentStatus: 'pending',
+                },
+            });
+            if (existingPaymentRequest) {
+                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Pending payment request already exists for this seller');
+            }
             const duePaymentRequest = yield prisma_1.default.payment.create({
                 data: {
                     amount,
@@ -52,13 +62,14 @@ class PaymentService {
                     adminWalletPhoneNo,
                     sender: 'Seller',
                     paymentType: 'DuePayment',
+                    sellerId,
                 },
             });
             return duePaymentRequest;
         });
     }
     createOrderPaymentRequest(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ tx, amount, transactionId, sellerWalletName, sellerWalletPhoneNo, sellerName, sellerPhoneNo, adminWalletId, adminWalletName, adminWalletPhoneNo, orderId, }) {
+        return __awaiter(this, arguments, void 0, function* ({ tx, amount, transactionId, sellerWalletName, sellerWalletPhoneNo, sellerName, sellerPhoneNo, adminWalletId, adminWalletName, adminWalletPhoneNo, orderId, sellerId, }) {
             const orderPaymentRequest = yield tx.payment.create({
                 data: {
                     amount,
@@ -73,13 +84,14 @@ class PaymentService {
                     orderId,
                     sender: 'Seller',
                     paymentType: 'OrderPayment',
+                    sellerId,
                 },
             });
             return orderPaymentRequest;
         });
     }
     createWithdrawPaymentRequest(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ tx, amount, transactionId, sellerWalletName, sellerWalletPhoneNo, sellerName, sellerPhoneNo, adminWalletId, adminWalletName, adminWalletPhoneNo, }) {
+        return __awaiter(this, arguments, void 0, function* ({ tx, amount, transactionId, sellerWalletName, sellerWalletPhoneNo, sellerName, sellerPhoneNo, adminWalletId, adminWalletName, adminWalletPhoneNo, sellerId, }) {
             const withdrawPaymentRequest = yield tx.payment.create({
                 data: {
                     amount,
@@ -94,6 +106,7 @@ class PaymentService {
                     sender: 'Admin',
                     paymentType: 'WithdrawPayment',
                     paymentStatus: 'verified',
+                    sellerId,
                 },
             });
             return withdrawPaymentRequest;
