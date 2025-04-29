@@ -71,7 +71,28 @@ class PaymentController {
                     userId: userId,
                     page: Number(page) || 1,
                     limit: Number(limit) || 10,
-                    status,
+                    status: status,
+                });
+                res.status(axios_1.HttpStatusCode.Ok).json({
+                    statusCode: axios_1.HttpStatusCode.Ok,
+                    success: true,
+                    message: 'Payments fetched successfully',
+                    data: payments,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    getAllPaymentsForAdmin(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { page, limit, status } = req.query;
+                const payments = yield payment_services_1.default.getAllPaymentsForAdmin({
+                    page: Number(page) || 1,
+                    limit: Number(limit) || 10,
+                    status: status,
                 });
                 res.status(axios_1.HttpStatusCode.Ok).json({
                     statusCode: axios_1.HttpStatusCode.Ok,

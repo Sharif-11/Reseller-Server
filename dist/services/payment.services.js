@@ -195,5 +195,22 @@ class PaymentService {
             };
         });
     }
+    getAllPaymentsForAdmin(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ page, limit, status, }) {
+            const payments = yield prisma_1.default.payment.findMany({
+                where: Object.assign({}, (status && { paymentStatus: status })),
+                orderBy: { paymentDate: 'desc' },
+                skip: (page - 1) * limit,
+                take: limit,
+            });
+            const totalPayments = yield prisma_1.default.payment.count();
+            return {
+                payments,
+                totalPayments,
+                currentPage: page,
+                totalPages: Math.ceil(totalPayments / limit),
+            };
+        });
+    }
 }
 exports.default = new PaymentService();

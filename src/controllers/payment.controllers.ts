@@ -67,7 +67,29 @@ class PaymentController {
         userId: userId as string,
         page: Number(page) || 1,
         limit: Number(limit) || 10,
-        status,
+        status: status as string | undefined,
+      })
+      res.status(HttpStatusCode.Ok).json({
+        statusCode: HttpStatusCode.Ok,
+        success: true,
+        message: 'Payments fetched successfully',
+        data: payments,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  async getAllPaymentsForAdmin(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { page, limit, status } = req.query
+      const payments = await paymentServices.getAllPaymentsForAdmin({
+        page: Number(page) || 1,
+        limit: Number(limit) || 10,
+        status: status as string | undefined,
       })
       res.status(HttpStatusCode.Ok).json({
         statusCode: HttpStatusCode.Ok,

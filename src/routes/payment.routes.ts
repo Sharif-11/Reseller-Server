@@ -5,8 +5,13 @@ const sellerPaymentRoutes = Router()
 const adminPaymentRoutes = Router()
 sellerPaymentRoutes.get('/', paymentControllers.getAllPaymentsOfASeller)
 sellerPaymentRoutes.post('/due', paymentControllers.createDuePayment)
+adminPaymentRoutes.get('/', paymentControllers.getAllPaymentsForAdmin)
 adminPaymentRoutes.patch(
-  '/due/:paymentId',
+  '/:paymentId/verify-due',
   paymentControllers.verifyDuePaymentRequest
+)
+adminPaymentRoutes.patch(
+  '/:paymentId/reject',
+  paymentControllers.rejectPaymentRequest
 )
 export { adminPaymentRoutes, sellerPaymentRoutes }

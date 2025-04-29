@@ -283,5 +283,30 @@ class PaymentService {
       totalPages: Math.ceil(totalPayments / limit),
     }
   }
+  async getAllPaymentsForAdmin({
+    page,
+    limit,
+    status,
+  }: {
+    page: number
+    limit: number
+    status?: string
+  }) {
+    const payments = await prisma.payment.findMany({
+      where: {
+        ...(status && { paymentStatus: status as any }),
+      },
+      orderBy: { paymentDate: 'desc' },
+      skip: (page - 1) * limit,
+      take: limit,
+    })
+    const totalPayments = await prisma.payment.count()
+    return {
+      payments,
+      totalPayments,
+      currentPage: page,
+      totalPages: Math.ceil(totalPayments / limit),
+    }
+  }
 }
 export default new PaymentService()

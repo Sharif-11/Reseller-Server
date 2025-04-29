@@ -12,4 +12,6 @@ const adminPaymentRoutes = (0, express_1.Router)();
 exports.adminPaymentRoutes = adminPaymentRoutes;
 sellerPaymentRoutes.get('/', payment_controllers_1.default.getAllPaymentsOfASeller);
 sellerPaymentRoutes.post('/due', payment_controllers_1.default.createDuePayment);
-adminPaymentRoutes.patch('/due/:paymentId', payment_controllers_1.default.verifyDuePaymentRequest);
+adminPaymentRoutes.get('/', payment_controllers_1.default.getAllPaymentsForAdmin);
+adminPaymentRoutes.patch('/:paymentId/verify-due', payment_controllers_1.default.verifyDuePaymentRequest);
+adminPaymentRoutes.patch('/:paymentId/reject', payment_controllers_1.default.rejectPaymentRequest);
