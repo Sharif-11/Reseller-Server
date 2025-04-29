@@ -40,12 +40,13 @@ class PaymentController {
   ) {
     try {
       const { paymentId } = req.params
-      const payment = await paymentServices.verifyPaymentRequest({
+      const payment = await paymentServices.verifyDuePaymentRequest({
         paymentId: Number(paymentId),
         amount: req.body.amount,
         transactionId: req.body.transactionId,
       })
       res.status(HttpStatusCode.Accepted).json({
+        statusCode: HttpStatusCode.Accepted,
         success: true,
         message: 'Payment request verified successfully',
         data: payment,

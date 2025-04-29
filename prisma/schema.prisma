@@ -276,12 +276,12 @@ model Payment {
   processedAt DateTime?
 
   orderId       Int?
-  withdrawId    Int?
+  withdrawId    String?
   paymentStatus PaymentStatus @default(pending)
   paymentType   PaymentType
   sender        Role
 
-  adminWalletId       Int
+  adminWalletId       Int?
   adminWalletName     String
   adminWalletPhoneNo  String
   sellerWalletName    String
@@ -291,8 +291,10 @@ model Payment {
   sellerPhoneNo String
   sellerId      String
 
-  transactionId String? @unique
-  amount        Decimal @db.Decimal(15, 2)
+  transactionId  String?  @unique
+  amount         Decimal  @db.Decimal(15, 2)
+  transactionFee Decimal? @db.Decimal(15, 2)
+  actualAmount   Decimal  @db.Decimal(15, 2)
 
   remarks String? // Optional remarks for the payment
 

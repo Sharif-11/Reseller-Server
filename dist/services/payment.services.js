@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const axios_1 = require("axios");
 const ApiError_1 = __importDefault(require("../utils/ApiError"));
 const prisma_1 = __importDefault(require("../utils/prisma"));
+const transaction_services_1 = __importDefault(require("./transaction.services"));
 const user_services_1 = __importDefault(require("./user.services"));
 const wallet_services_1 = __importDefault(require("./wallet.services"));
 class PaymentService {
@@ -63,6 +64,7 @@ class PaymentService {
                     sender: 'Seller',
                     paymentType: 'DuePayment',
                     sellerId,
+                    actualAmount: amount,
                 },
             });
             return duePaymentRequest;
@@ -73,6 +75,7 @@ class PaymentService {
             const orderPaymentRequest = yield tx.payment.create({
                 data: {
                     amount,
+                    actualAmount: amount,
                     transactionId,
                     sellerWalletName,
                     sellerWalletPhoneNo,
@@ -91,7 +94,7 @@ class PaymentService {
         });
     }
     createWithdrawPaymentRequest(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ tx, amount, transactionId, sellerWalletName, sellerWalletPhoneNo, sellerName, sellerPhoneNo, adminWalletId, adminWalletName, adminWalletPhoneNo, sellerId, }) {
+        return __awaiter(this, arguments, void 0, function* ({ tx, amount, transactionId, sellerWalletName, sellerWalletPhoneNo, sellerName, sellerPhoneNo, adminWalletName, adminWalletPhoneNo, sellerId, withdrawId, actualAmount, transactionFee, }) {
             const withdrawPaymentRequest = yield tx.payment.create({
                 data: {
                     amount,
@@ -100,25 +103,27 @@ class PaymentService {
                     sellerWalletPhoneNo,
                     sellerName,
                     sellerPhoneNo,
-                    adminWalletId,
                     adminWalletName,
                     adminWalletPhoneNo,
                     sender: 'Admin',
                     paymentType: 'WithdrawPayment',
                     paymentStatus: 'verified',
                     sellerId,
+                    withdrawId,
+                    actualAmount,
+                    transactionFee,
                 },
             });
             return withdrawPaymentRequest;
         });
     }
-    verifyPaymentRequest(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ tx, paymentId, amount, transactionId, }) {
-            const existingPayment = yield (tx || prisma_1.default).payment.findUnique({
+    verifyDuePaymentRequest(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ paymentId, amount, transactionId, }) {
+            const existingPayment = yield prisma_1.default.payment.findUnique({
                 where: { paymentId },
             });
             if (!existingPayment) {
-                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Payment request not found');
+                throw new ApiError_1.default(axios_1.HttpStatusCode.NotFound, 'Payment request not found');
             }
             if (existingPayment.paymentStatus !== 'pending') {
                 throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Only pending payment requests can be verified');
@@ -126,14 +131,28 @@ class PaymentService {
             if (transactionId !== existingPayment.transactionId) {
                 throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Transaction ID does not match the existing payment request');
             }
-            const updatedPayment = yield (tx || prisma_1.default).payment.update({
-                where: { paymentId },
-                data: {
-                    paymentStatus: 'verified',
-                    amount,
-                },
-            });
-            return updatedPayment;
+            // here we need to verify the payment along with adding the balance to the seller wallet within a transaction
+            const payment = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                const updatedPayment = yield tx.payment.update({
+                    where: { paymentId },
+                    data: {
+                        paymentStatus: 'verified',
+                        transactionId,
+                        actualAmount: amount,
+                        processedAt: new Date(),
+                    },
+                });
+                const updatedUser = yield transaction_services_1.default.compensateDue({
+                    tx,
+                    amount: Number(updatedPayment.amount),
+                    userId: updatedPayment.sellerId,
+                    transactionId: String(updatedPayment.transactionId),
+                    paymentPhoneNo: updatedPayment.sellerWalletPhoneNo,
+                    paymentMethod: updatedPayment.sellerWalletName,
+                });
+                return { updatedPayment, updatedUser };
+            }));
+            return payment.updatedPayment;
         });
     }
     rejectPaymentRequest(_a) {

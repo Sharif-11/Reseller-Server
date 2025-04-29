@@ -4,6 +4,7 @@ import { WalletName } from '../types/withdraw.types'
 import ApiError from '../utils/ApiError'
 import prisma from '../utils/prisma'
 import { calculateWithdrawal } from '../utils/withdraw.utils'
+import paymentServices from './payment.services'
 import SmsServices from './sms.services'
 import transactionServices from './transaction.services'
 
@@ -285,6 +286,22 @@ class WithdrawRequestServices {
                 processedAt: new Date(),
               },
             })
+            const withdrawPayment =
+              await paymentServices.createWithdrawPaymentRequest({
+                tx,
+                withdrawId: updatedRequest.withdrawId,
+                amount: updatedRequest.actualAmount.toNumber(),
+                transactionId,
+                sellerWalletName: updatedRequest.walletName,
+                sellerWalletPhoneNo: updatedRequest.walletPhoneNo,
+                sellerName: updatedRequest.userName,
+                sellerPhoneNo: updatedRequest.userPhoneNo,
+                adminWalletName: updatedRequest.walletName,
+                adminWalletPhoneNo: String(transactionPhoneNo),
+                sellerId: updatedRequest.userId,
+                actualAmount: updatedRequest.actualAmount.toNumber(),
+                transactionFee: updatedRequest.transactionFee.toNumber(),
+              })
 
             const transaction = await transactionServices.withdrawBalance({
               tx,
@@ -296,7 +313,7 @@ class WithdrawRequestServices {
               paymentPhoneNo: transactionPhoneNo,
             })
 
-            return { updatedRequest, transaction }
+            return { updatedRequest, transaction, withdrawPayment }
           } catch (error) {
             console.error('Error during transaction:', error)
             throw error

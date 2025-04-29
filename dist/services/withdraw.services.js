@@ -17,6 +17,7 @@ const config_1 = __importDefault(require("../config"));
 const ApiError_1 = __importDefault(require("../utils/ApiError"));
 const prisma_1 = __importDefault(require("../utils/prisma"));
 const withdraw_utils_1 = require("../utils/withdraw.utils");
+const payment_services_1 = __importDefault(require("./payment.services"));
 const sms_services_1 = __importDefault(require("./sms.services"));
 const transaction_services_1 = __importDefault(require("./transaction.services"));
 class WithdrawRequestServices {
@@ -244,6 +245,21 @@ class WithdrawRequestServices {
                                 processedAt: new Date(),
                             },
                         });
+                        const withdrawPayment = yield payment_services_1.default.createWithdrawPaymentRequest({
+                            tx,
+                            withdrawId: updatedRequest.withdrawId,
+                            amount: updatedRequest.actualAmount.toNumber(),
+                            transactionId,
+                            sellerWalletName: updatedRequest.walletName,
+                            sellerWalletPhoneNo: updatedRequest.walletPhoneNo,
+                            sellerName: updatedRequest.userName,
+                            sellerPhoneNo: updatedRequest.userPhoneNo,
+                            adminWalletName: updatedRequest.walletName,
+                            adminWalletPhoneNo: String(transactionPhoneNo),
+                            sellerId: updatedRequest.userId,
+                            actualAmount: updatedRequest.actualAmount.toNumber(),
+                            transactionFee: updatedRequest.transactionFee.toNumber(),
+                        });
                         const transaction = yield transaction_services_1.default.withdrawBalance({
                             tx,
                             amount: new decimal_js_1.default(request.amount).toNumber(),
@@ -253,7 +269,7 @@ class WithdrawRequestServices {
                             transactionId,
                             paymentPhoneNo: transactionPhoneNo,
                         });
-                        return { updatedRequest, transaction };
+                        return { updatedRequest, transaction, withdrawPayment };
                     }
                     catch (error) {
                         console.error('Error during transaction:', error);

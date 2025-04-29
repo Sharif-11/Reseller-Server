@@ -44,12 +44,13 @@ class PaymentController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { paymentId } = req.params;
-                const payment = yield payment_services_1.default.verifyPaymentRequest({
+                const payment = yield payment_services_1.default.verifyDuePaymentRequest({
                     paymentId: Number(paymentId),
                     amount: req.body.amount,
                     transactionId: req.body.transactionId,
                 });
                 res.status(axios_1.HttpStatusCode.Accepted).json({
+                    statusCode: axios_1.HttpStatusCode.Accepted,
                     success: true,
                     message: 'Payment request verified successfully',
                     data: payment,

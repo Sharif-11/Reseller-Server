@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import { HttpStatusCode } from 'axios'
 import ApiError from '../utils/ApiError'
 import prisma from '../utils/prisma'
+import transactionServices from './transaction.services'
 import userServices from './user.services'
 import walletServices from './wallet.services'
 
@@ -70,6 +71,7 @@ class PaymentService {
         sender: 'Seller',
         paymentType: 'DuePayment',
         sellerId,
+        actualAmount: amount,
       },
     })
     return duePaymentRequest
@@ -104,6 +106,7 @@ class PaymentService {
     const orderPaymentRequest = await tx.payment.create({
       data: {
         amount,
+        actualAmount: amount,
         transactionId,
         sellerWalletName,
         sellerWalletPhoneNo,
@@ -128,10 +131,12 @@ class PaymentService {
     sellerWalletPhoneNo,
     sellerName,
     sellerPhoneNo,
-    adminWalletId,
     adminWalletName,
     adminWalletPhoneNo,
     sellerId,
+    withdrawId,
+    actualAmount,
+    transactionFee,
   }: {
     tx: Prisma.TransactionClient
     amount: number
@@ -140,10 +145,12 @@ class PaymentService {
     sellerWalletPhoneNo: string
     sellerName: string
     sellerPhoneNo: string
-    adminWalletId: number
     adminWalletName: string
     adminWalletPhoneNo: string
     sellerId: string
+    withdrawId: string
+    actualAmount: number
+    transactionFee: number
   }) {
     const withdrawPaymentRequest = await tx.payment.create({
       data: {
@@ -153,33 +160,33 @@ class PaymentService {
         sellerWalletPhoneNo,
         sellerName,
         sellerPhoneNo,
-        adminWalletId,
         adminWalletName,
         adminWalletPhoneNo,
         sender: 'Admin',
         paymentType: 'WithdrawPayment',
         paymentStatus: 'verified',
         sellerId,
+        withdrawId,
+        actualAmount,
+        transactionFee,
       },
     })
     return withdrawPaymentRequest
   }
-  async verifyPaymentRequest({
-    tx,
+  async verifyDuePaymentRequest({
     paymentId,
     amount,
     transactionId,
   }: {
-    tx?: Prisma.TransactionClient
     paymentId: number
     transactionId: string
     amount: number
   }) {
-    const existingPayment = await (tx || prisma).payment.findUnique({
+    const existingPayment = await prisma.payment.findUnique({
       where: { paymentId },
     })
     if (!existingPayment) {
-      throw new ApiError(HttpStatusCode.BadRequest, 'Payment request not found')
+      throw new ApiError(HttpStatusCode.NotFound, 'Payment request not found')
     }
     if (existingPayment.paymentStatus !== 'pending') {
       throw new ApiError(
@@ -193,14 +200,28 @@ class PaymentService {
         'Transaction ID does not match the existing payment request'
       )
     }
-    const updatedPayment = await (tx || prisma).payment.update({
-      where: { paymentId },
-      data: {
-        paymentStatus: 'verified',
-        amount,
-      },
+    // here we need to verify the payment along with adding the balance to the seller wallet within a transaction
+    const payment = await prisma.$transaction(async tx => {
+      const updatedPayment = await tx.payment.update({
+        where: { paymentId },
+        data: {
+          paymentStatus: 'verified',
+          transactionId,
+          actualAmount: amount,
+          processedAt: new Date(),
+        },
+      })
+      const updatedUser = await transactionServices.compensateDue({
+        tx,
+        amount: Number(updatedPayment.amount),
+        userId: updatedPayment.sellerId,
+        transactionId: String(updatedPayment.transactionId),
+        paymentPhoneNo: updatedPayment.sellerWalletPhoneNo,
+        paymentMethod: updatedPayment.sellerWalletName,
+      })
+      return { updatedPayment, updatedUser }
     })
-    return updatedPayment
+    return payment.updatedPayment
   }
   async rejectPaymentRequest({
     tx,
