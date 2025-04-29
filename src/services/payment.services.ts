@@ -45,7 +45,7 @@ class PaymentService {
     }
     const existingPaymentRequest = await prisma.payment.findFirst({
       where: {
-        sellerPhoneNo,
+        sellerId,
         paymentType: 'DuePayment',
         paymentStatus: 'pending',
       },

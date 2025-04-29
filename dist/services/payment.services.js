@@ -41,7 +41,7 @@ class PaymentService {
             }
             const existingPaymentRequest = yield prisma_1.default.payment.findFirst({
                 where: {
-                    sellerPhoneNo,
+                    sellerId,
                     paymentType: 'DuePayment',
                     paymentStatus: 'pending',
                 },
