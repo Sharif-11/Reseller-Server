@@ -186,19 +186,19 @@ class PaymentService {
       where: { paymentId },
     })
     if (!existingPayment) {
-      throw new ApiError(HttpStatusCode.NotFound, 'Payment request not found')
+      throw new ApiError(
+        HttpStatusCode.NotFound,
+        'পেমেন্ট অনুরোধ পাওয়া যায়নি'
+      )
     }
     if (existingPayment.paymentStatus !== 'pending') {
       throw new ApiError(
         HttpStatusCode.BadRequest,
-        'Only pending payment requests can be verified'
+        'শুধুমাত্র অমীমাংসিত পেমেন্ট অনুরোধগুলি যাচাই করা যেতে পারে'
       )
     }
     if (transactionId !== existingPayment.transactionId) {
-      throw new ApiError(
-        HttpStatusCode.BadRequest,
-        'Transaction ID does not match the existing payment request'
-      )
+      throw new ApiError(HttpStatusCode.BadRequest, 'ট্রানজেকশন আইডি  মিলছে না')
     }
     // here we need to verify the payment along with adding the balance to the seller wallet within a transaction
     const payment = await prisma.$transaction(async tx => {

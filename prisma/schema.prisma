@@ -202,12 +202,12 @@ model WithdrawRequest {
 }
 
 model Order {
-  orderId         Int         @id @default(autoincrement())
-  orderStatus     OrderStatus @default(pending)
-  orderCreatedAt  DateTime    @default(now())
-  orderUpdatedAt  DateTime    @updatedAt
-  cancelledByUser Boolean     @default(false)
-  remarks         String? // Optional remarks for the order
+  orderId           Int         @id @default(autoincrement())
+  orderStatus       OrderStatus @default(pending)
+  orderCreatedAt    DateTime    @default(now())
+  orderUpdatedAt    DateTime    @updatedAt
+  cancelledBySeller Boolean     @default(false)
+  remarks           String? // Optional remarks for the order
 
   sellerId       String
   sellerName     String
@@ -228,19 +228,19 @@ model Order {
 
   orderProducts OrderProduct[] // One-to-many relationship with OrderProduct
 
-  deliveryCharge                   Decimal  @db.Decimal(15, 2)
-  deliveryChargeMustBePaidBySeller Decimal? @db.Decimal(15, 2)
-  deliveryChargePaidBySeller       Decimal? @db.Decimal(15, 2)
-  isDeliveryChargePaidBySeller     Boolean  @default(false)
-  transactionId                    String?  @unique
-  transactionVerified              Boolean? @default(false)
-  sellerWalletName                 String?
-  sellerWalletPhoneNo              String?
-  adminWalletId                    Int?
-  adminWalletName                  String?
-  adminWalletPhoneNo               String?
+  deliveryCharge               Decimal  @db.Decimal(15, 2)
+  isDeliveryChargePaidBySeller Boolean  @default(false)
+  deliveryChargePaidBySeller   Decimal? @db.Decimal(15, 2)
+  transactionId                String?  @unique
+  transactionVerified          Boolean? @default(false)
+  sellerWalletName             String?
+  sellerWalletPhoneNo          String?
+  adminWalletId                Int?
+  adminWalletName              String?
+  adminWalletPhoneNo           String?
 
   totalAmount               Decimal  @db.Decimal(15, 2)
+  cashOnAmount              Decimal? @db.Decimal(15, 2)
   totalCommission           Decimal  @db.Decimal(15, 2)
   actualCommission          Decimal  @db.Decimal(15, 2)
   totalProductBasePrice     Decimal  @db.Decimal(15, 2)
@@ -302,8 +302,8 @@ model Payment {
 }
 
 enum OrderStatus {
+  unverified
   pending
-  approved
   processing
   shipped
   cancelled
