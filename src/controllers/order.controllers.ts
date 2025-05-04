@@ -196,7 +196,8 @@ class OrderController {
   async reOrderFaulty(req: Request, res: Response, next: NextFunction) {
     try {
       const orderId = +req.params.orderId
-      const order = await OrderServices.reOrderFaulty(orderId)
+      const sellerId = req.user?.userId
+      const order = await OrderServices.reOrderFaulty(orderId, sellerId!)
       res.status(200).json({
         statusCode: 200,
         message: 'আপনি সফলভাবে পুনরায় অর্ডার করেছেন',

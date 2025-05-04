@@ -680,12 +680,16 @@ class OrderServices {
             return updatedOrder;
         });
     }
-    reOrderFaulty(orderId) {
+    reOrderFaulty(orderId, sellerId) {
         return __awaiter(this, void 0, void 0, function* () {
             // [Backend Fetching Needed] Get order details
             const order = yield this.getOrderById(orderId);
             if (order.orderStatus !== client_1.OrderStatus.faulty) {
                 throw new ApiError_1.default(400, 'শুধুমাত্র ফল্টি অর্ডার পুনরায় অর্ডার করা যাবে');
+            }
+            // check if the order is belongs to the seller
+            if (order.sellerId !== sellerId) {
+                throw new ApiError_1.default(400, 'অর্ডারটি আপনার নয়');
             }
             const updatedOrder = yield prisma_1.default.order.update({
                 where: { orderId },

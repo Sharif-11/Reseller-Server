@@ -803,12 +803,16 @@ class OrderServices {
     })
     return updatedOrder
   }
-  async reOrderFaulty(orderId: number): Promise<Order> {
+  async reOrderFaulty(orderId: number, sellerId: string): Promise<Order> {
     // [Backend Fetching Needed] Get order details
     const order = await this.getOrderById(orderId)
 
     if (order.orderStatus !== OrderStatus.faulty) {
       throw new ApiError(400, 'শুধুমাত্র ফল্টি অর্ডার পুনরায় অর্ডার করা যাবে')
+    }
+    // check if the order is belongs to the seller
+    if (order.sellerId !== sellerId) {
+      throw new ApiError(400, 'অর্ডারটি আপনার নয়')
     }
     const updatedOrder = await prisma.order.update({
       where: { orderId },

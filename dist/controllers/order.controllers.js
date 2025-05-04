@@ -216,9 +216,11 @@ class OrderController {
     }
     reOrderFaulty(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             try {
                 const orderId = +req.params.orderId;
-                const order = yield order_services_1.default.reOrderFaulty(orderId);
+                const sellerId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+                const order = yield order_services_1.default.reOrderFaulty(orderId, sellerId);
                 res.status(200).json({
                     statusCode: 200,
                     message: 'আপনি সফলভাবে পুনরায় অর্ডার করেছেন',
