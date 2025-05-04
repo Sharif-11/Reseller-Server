@@ -44,8 +44,8 @@ class UserServices {
             const user = yield prisma_1.default.user.findUnique({
                 where: { phoneNo },
                 include: {
-                    wallets: true
-                }
+                    wallets: true,
+                },
             });
             if (!user) {
                 throw new ApiError_1.default(404, 'ব্যবহারকারী পাওয়া যায়নি');
@@ -64,6 +64,22 @@ class UserServices {
                 where: { userId },
                 include: {
                     wallets: true,
+                },
+            });
+            if (!user) {
+                throw new ApiError_1.default(404, 'ব্যবহারকারী পাওয়া যায়নি');
+            }
+            return user;
+        });
+    }
+    getUserDetailByUserId(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ tx, userId, }) {
+            const user = yield tx.user.findUnique({
+                where: { userId },
+                include: {
+                    wallets: true,
+                    referredBy: true,
+                    referrals: true,
                 },
             });
             if (!user) {

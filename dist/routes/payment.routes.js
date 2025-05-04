@@ -14,4 +14,6 @@ sellerPaymentRoutes.get('/', payment_controllers_1.default.getAllPaymentsOfASell
 sellerPaymentRoutes.post('/due', payment_controllers_1.default.createDuePayment);
 adminPaymentRoutes.get('/', payment_controllers_1.default.getAllPaymentsForAdmin);
 adminPaymentRoutes.patch('/:paymentId/verify-due', payment_controllers_1.default.verifyDuePaymentRequest);
+adminPaymentRoutes.patch('/:paymentId/verify-order', payment_controllers_1.default.verifyOrderPaymentRequest);
+adminPaymentRoutes.patch('/:paymentId/reject-order', payment_controllers_1.default.rejectOrderPaymentRequest);
 adminPaymentRoutes.patch('/:paymentId/reject', payment_controllers_1.default.rejectPaymentRequest);

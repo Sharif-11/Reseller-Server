@@ -310,6 +310,45 @@ class PaymentService {
       },
     })
   }
+  async rejectOrderPaymentRequest({
+    paymentId,
+    remarks,
+  }: {
+    paymentId: number
+    remarks?: string
+  }) {
+    const existingPayment = await prisma.payment.findUnique({
+      where: { paymentId, paymentType: 'OrderPayment' },
+    })
+    if (!existingPayment) {
+      throw new ApiError(HttpStatusCode.BadRequest, 'Payment request not found')
+    }
+    if (existingPayment.paymentStatus !== 'pending') {
+      throw new ApiError(
+        HttpStatusCode.BadRequest,
+        'Only pending payment requests can be rejected'
+      )
+    }
+    // we need to make the payment rejected and also update the orderStatus to rejected and make transaction id null
+    const payment = await prisma.$transaction(async tx => {
+      const updatedPayment = await tx.payment.update({
+        where: { paymentId },
+        data: {
+          paymentStatus: 'rejected',
+          transactionId: null,
+          remarks,
+        },
+      })
+      const updatedOrder = await tx.order.update({
+        where: { orderId: existingPayment.orderId! },
+        data: {
+          orderStatus: 'rejected',
+          transactionVerified: false,
+        },
+      })
+      return { updatedPayment, updatedOrder }
+    })
+  }
   async getAllPaymentsOfASeller({
     userId,
     page,

@@ -61,6 +61,48 @@ class PaymentController {
             }
         });
     }
+    verifyOrderPaymentRequest(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { paymentId } = req.params;
+                const payment = yield payment_services_1.default.verifyOrderPaymentRequest({
+                    paymentId: Number(paymentId),
+                    amount: req.body.amount,
+                    transactionId: req.body.transactionId,
+                });
+                res.status(axios_1.HttpStatusCode.Accepted).json({
+                    statusCode: axios_1.HttpStatusCode.Accepted,
+                    success: true,
+                    message: 'Payment request verified successfully',
+                    data: payment,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    rejectOrderPaymentRequest(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { paymentId } = req.params;
+                const { remarks } = req.body;
+                const payment = yield payment_services_1.default.rejectOrderPaymentRequest({
+                    paymentId: Number(paymentId),
+                    remarks,
+                });
+                res.status(axios_1.HttpStatusCode.Accepted).json({
+                    statusCode: axios_1.HttpStatusCode.Accepted,
+                    success: true,
+                    message: 'Payment request rejected successfully',
+                    data: payment,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
     getAllPaymentsOfASeller(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;

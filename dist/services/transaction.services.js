@@ -14,8 +14,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const decimal_js_1 = __importDefault(require("decimal.js"));
 const ApiError_1 = __importDefault(require("../utils/ApiError"));
-const sms_services_1 = __importDefault(require("./sms.services"));
 const prisma_1 = __importDefault(require("../utils/prisma"));
+const sms_services_1 = __importDefault(require("./sms.services"));
 class TransactionService {
     /**
      * ট্রানজেকশন আইডি চেক করার জন্য প্রাইভেট মেথড
@@ -46,7 +46,13 @@ class TransactionService {
             yield tx.$executeRaw `SELECT * FROM "users" WHERE "userId" = ${userId} FOR UPDATE`;
             const user = yield tx.user.findUnique({
                 where: { userId },
-                select: { balance: true, version: true, phoneNo: true, name: true, isLocked: true },
+                select: {
+                    balance: true,
+                    version: true,
+                    phoneNo: true,
+                    name: true,
+                    isLocked: true,
+                },
             });
             if (!user) {
                 throw new ApiError_1.default(404, 'ব্যবহারকারী পাওয়া যায়নি');
@@ -68,7 +74,7 @@ class TransactionService {
             const updatedUser = yield tx.user.updateMany({
                 where: {
                     userId,
-                    version: currentVersion
+                    version: currentVersion,
                 },
                 data: {
                     balance: newBalance.toFixed(2),
@@ -141,7 +147,8 @@ class TransactionService {
                 totalPages: Math.ceil(total / pageSize),
                 totalCredit: totalCredit._sum.amount || 0,
                 totalDebit: totalDebit._sum.amount || 0,
-                calculatedBalance: Number((totalCredit === null || totalCredit === void 0 ? void 0 : totalCredit._sum.amount) || 0) - Number(totalDebit._sum.amount || 0),
+                calculatedBalance: Number((totalCredit === null || totalCredit === void 0 ? void 0 : totalCredit._sum.amount) || 0) -
+                    Number(totalDebit._sum.amount || 0),
             };
         });
     }
@@ -258,8 +265,8 @@ class TransactionService {
      * @returns তৈরি করা ট্রানজেকশন
      * @throws ApiError যদি পরিমাণ নেগেটিভ হয় বা ব্যালেন্স কম থাকে
      */
-    deductDeliveryChargeForOrderApproval(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ tx, amount, userId, }) {
+    deductDeliveryChargeForOrder(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ tx, amount, userId, remarks, }) {
             const decimalAmount = new decimal_js_1.default(amount);
             if (decimalAmount.isNegative()) {
                 throw new ApiError_1.default(400, 'পরিমাণ নেগেটিভ হতে পারবে না');
@@ -274,7 +281,7 @@ class TransactionService {
                 userName: user.name,
                 type: 'Debit',
                 reason: 'ডেলিভারি চার্জ কর্তন',
-                remarks: 'অর্ডার অনুমোদনের জন্য ডেলিভারি চার্জ কাটা হয়েছে',
+                remarks,
             });
             return { transaction };
         });
@@ -322,7 +329,7 @@ class TransactionService {
     
      */
     addSellerCommission(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ tx, amount, userId, userPhoneNo, userName }) {
+        return __awaiter(this, arguments, void 0, function* ({ tx, amount, userId, userPhoneNo, userName, }) {
             const decimalAmount = new decimal_js_1.default(amount);
             if (decimalAmount.isNegative()) {
                 throw new ApiError_1.default(400, 'পরিমাণ নেগেটিভ হতে পারবে না');
@@ -341,6 +348,28 @@ class TransactionService {
             return transaction;
         });
     }
+    addReferralCommission(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ tx, amount, userId, userPhoneNo, userName, referralLevel, reference, }) {
+            const decimalAmount = new decimal_js_1.default(amount);
+            if (decimalAmount.isNegative()) {
+                throw new ApiError_1.default(400, 'পরিমাণ নেগেটিভ হতে পারবে না');
+            }
+            const user = yield this.getUserWithLock(tx, userId);
+            const newBalance = user.balance.plus(decimalAmount);
+            yield this.updateUserBalance(tx, userId, user.version, newBalance, newBalance.isNegative() ? user.isLocked : false);
+            const transaction = yield this.createTransactionRecord(tx, {
+                amount: decimalAmount,
+                userId,
+                userPhoneNo: userPhoneNo,
+                userName: userName,
+                type: 'Credit',
+                reason: 'রেফারেল কমিশন',
+                referralLevel,
+                reference,
+            });
+            return transaction;
+        });
+    }
     /**
      * Return Delivery Charge After Order Completion
      * @param tx - Prisma ট্রানজেকশন ক্লায়েন্ট
@@ -350,7 +379,7 @@ class TransactionService {
      * @param userName - ইউজার নাম
      * @returns তৈরি করা ট্রানজেকশন
      * @throws ApiError যদি পরিমাণ নেগেটিভ হয় বা ট্রানজেকশন আইডি ইতিমধ্যে থাকে
-      */
+     */
     returnDeliveryChargeAfterOrderCompletion(_a) {
         return __awaiter(this, arguments, void 0, function* ({ tx, amount, userId, userPhoneNo, userName, }) {
             const decimalAmount = new decimal_js_1.default(amount);

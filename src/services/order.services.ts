@@ -1,8 +1,9 @@
-import { Order } from '@prisma/client'
+import { Order, OrderStatus } from '@prisma/client'
 import Decimal from 'decimal.js'
 import config from '../config'
 import ApiError from '../utils/ApiError'
 import prisma from '../utils/prisma'
+import referralService from './commission.utils'
 import paymentServices from './payment.services'
 import productServices from './product.services'
 import transactionServices from './transaction.services'
@@ -220,13 +221,25 @@ class OrderServices {
     }
 
     // get admin wallet info
-    const adminWallet = await walletServices.getWalletById(
-      frontendData.adminWalletId!
-    )
-    const { walletName: adminWalletName, walletPhoneNo: adminWalletPhoneNo } =
-      adminWallet
+    let adminWalletName: string | null = null
+    let adminWalletPhoneNo: string | null = null
+    if (frontendData.adminWalletId) {
+      const adminWallet = await walletServices.getWalletById(
+        frontendData.adminWalletId
+      )
+      if (adminWallet) {
+        adminWalletName = adminWallet.walletName
+        adminWalletPhoneNo = adminWallet.walletPhoneNo
+      } else {
+        throw new ApiError(400, 'Invalid admin wallet ID')
+      }
+    }
 
     // we need to create the order within transaction, here we need to create a payment record also for the order
+    const isDeductBalance =
+      !sellerVerified &&
+      !frontendData.isDeliveryChargePaidBySeller &&
+      sellerBalance.toNumber() >= totalDeliveryCharge
     try {
       const order = await prisma.$transaction(async tx => {
         // Create order
@@ -264,9 +277,10 @@ class OrderServices {
             sellerWalletName: frontendData.sellerWalletName || null,
             sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo || null,
             deliveryCharge: totalDeliveryCharge,
-            cashOnAmount: frontendData.isDeliveryChargePaidBySeller
-              ? totalAmount
-              : totalAmount + totalDeliveryCharge,
+            cashOnAmount:
+              frontendData.isDeliveryChargePaidBySeller || isDeductBalance
+                ? totalAmount
+                : totalAmount + totalDeliveryCharge,
             orderProducts: {
               create: enrichedProducts.map(product => ({
                 productId: product.productId,
@@ -293,8 +307,8 @@ class OrderServices {
               sellerWalletName: frontendData.sellerWalletName!,
               sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo!,
               adminWalletId: frontendData.adminWalletId!,
-              adminWalletName: adminWalletName,
-              adminWalletPhoneNo: adminWalletPhoneNo,
+              adminWalletName: adminWalletName!,
+              adminWalletPhoneNo: adminWalletPhoneNo!,
               sellerId,
               sellerName,
               sellerPhoneNo,
@@ -305,16 +319,13 @@ class OrderServices {
             throw error
           }
         }
-        if (
-          !sellerVerified &&
-          !frontendData.isDeliveryChargePaidBySeller &&
-          sellerBalance.toNumber() >= totalDeliveryCharge
-        ) {
+        if (isDeductBalance) {
           // we need to create a transaction record for the delivery charge deduction
-          await transactionServices.deductDeliveryChargeForOrderApproval({
+          await transactionServices.deductDeliveryChargeForOrder({
             tx,
             userId: sellerId,
             amount: totalDeliveryCharge,
+            remarks: 'অর্ডার ভেরিফিকেশনের জন্য ডেলিভারি চার্জ কাটা হয়েছে',
           })
         }
         return createdOrder
@@ -338,7 +349,7 @@ class OrderServices {
     })
 
     if (!order) {
-      throw new ApiError(404, 'Order not found')
+      throw new ApiError(404, 'অর্ডার পাওয়া যায়নি')
     }
 
     return order
@@ -503,114 +514,115 @@ class OrderServices {
   //  * @param orderId - Order ID to be cancelled
   //  * @return Updated order
   //  * */
-  // async cancelOrderBySeller(orderId: number, sellerId: string): Promise<Order> {
-  //   // [Backend Fetching Needed] Get order details
-  //   const order = await this.getOrderById(orderId)
+  async cancelOrderBySeller(orderId: number, sellerId: string): Promise<Order> {
+    // [Backend Fetching Needed] Get order details
+    const order = await this.getOrderById(orderId)
 
-  //   if (order.cancelledByUser) {
-  //     throw new ApiError(400, 'অর্ডার ইতোমধ্যে বাতিল করা হয়েছে')
-  //   }
-  //   // check if the order is belongs to the seller
-  //   if (order.sellerId !== sellerId) {
-  //     throw new ApiError(400, 'অর্ডারটি আপনার নয়')
-  //   }
-  //   const cancellable =
-  //     order.orderStatus === OrderStatus.pending ||
-  //     order.orderStatus === OrderStatus.approved
-  //   if (!cancellable) {
-  //     throw new ApiError(
-  //       400,
-  //       'শুধুমাত্র অনুমোদিত অথবা পেন্ডিং অর্ডার বাতিল করা যাবে'
-  //     )
-  //   }
+    if (order.cancelledBySeller) {
+      throw new ApiError(400, 'অর্ডার ইতোমধ্যে বাতিল করা হয়েছে')
+    }
+    // check if the order is belongs to the seller
+    if (order.sellerId !== sellerId) {
+      throw new ApiError(400, 'অর্ডারটি আপনার নয়')
+    }
+    const cancellable =
+      order.orderStatus === OrderStatus.pending ||
+      order.orderStatus === OrderStatus.unverified
+    if (!cancellable) {
+      throw new ApiError(
+        400,
+        'শুধুমাত্র পেন্ডিং অথবা অযাচাইকৃত অর্ডার বাতিল করা যাবে'
+      )
+    }
 
-  //   const updatedOrder = await prisma.order.update({
-  //     where: { orderId },
-  //     data: {
-  //       cancelledByUser: true,
-  //     },
-  //   })
-  //   return updatedOrder
+    const updatedOrder = await prisma.order.update({
+      where: { orderId },
+      data: {
+        cancelledBySeller: true,
+      },
+    })
+    return updatedOrder
 
-  //   // Update order status to cancelled and refunds the delivery charge to the seller within transaction
-  // }
-  // /**
-  //  * Cancel Order By Admin
-  //  * @param orderId - Order ID to be cancelled
-  //  * @return Updated order
-  //  */
-  // async cancelOrderByAdmin(orderId: number, remarks?: string): Promise<Order> {
-  //   // [Backend Fetching Needed] Get order details
-  //   const order = await this.getOrderById(orderId)
-  //   const cancellable =
-  //     order.orderStatus === OrderStatus.processing ||
-  //     order.orderStatus === OrderStatus.approved
-  //   if (!cancellable) {
-  //     throw new ApiError(
-  //       400,
-  //       'শুধুমাত্র অনুমোদিত অথবা প্রক্রিয়াধীন অর্ডার বাতিল করা যাবে'
-  //     )
-  //   }
-  //   // Update order status to cancelled and refunds the delivery charge to the seller within transaction
-  //   const updatedOrder = await prisma.$transaction(async tx => {
-  //     const updatedOrder = await tx.order.update({
-  //       where: { orderId },
-  //       data: {
-  //         orderStatus: OrderStatus.refunded,
-  //         remarks: remarks ? remarks : null,
-  //       },
-  //     })
-  //     await transactionServices.refundOrderCancellation({
-  //       tx,
-  //       userId: order.sellerId,
-  //       amount: order.deliveryCharge.toNumber(),
-  //     })
-  //     return updatedOrder
-  //   })
-  //   return updatedOrder
-  // }
-  // /**
-  //  * Process Order By Admin
-  //  * @param orderId - Order ID to be processed
-  //  * @return Updated order
-  //  * */
-  // async processOrderByAdmin(orderId: number): Promise<Order> {
-  //   // [Backend Fetching Needed] Get order details
-  //   const order = await this.getOrderById(orderId)
+    // Update order status to cancelled and refunds the delivery charge to the seller within transaction
+  }
+  /**
+   * Cancel Order By Admin
+   * @param orderId - Order ID to be cancelled
+   * @return Updated order
+   */
+  async cancelOrderByAdmin(orderId: number, remarks?: string): Promise<Order> {
+    // [Backend Fetching Needed] Get order details
+    const order = await this.getOrderById(orderId)
+    const cancellable =
+      order.orderStatus === OrderStatus.processing ||
+      order.orderStatus === OrderStatus.pending
+    if (!cancellable) {
+      throw new ApiError(
+        400,
+        'শুধুমাত্র প্রক্রিয়াধীন অথবা পেন্ডিং অর্ডার বাতিল করা যাবে'
+      )
+    }
+    const refundable =
+      order.isDeliveryChargePaidBySeller ||
+      (!order.sellerVerified &&
+        !order.isDeliveryChargePaidBySeller &&
+        order.sellerBalance.toNumber() >= order.deliveryCharge.toNumber())
+    if (refundable) {
+      // Here We need to update the order status to cancelled , verify the transaction and add the amount to the seller wallets within transaction
+      const updatedOrder = await prisma.$transaction(async tx => {
+        const updatedOrder = await tx.order.update({
+          where: { orderId },
+          data: {
+            orderStatus: OrderStatus.refunded,
+            remarks: `${order.transactionId}=${remarks}`,
+          },
+        })
+        await transactionServices.refundOrderCancellation({
+          tx,
+          userId: order.sellerId,
+          amount: order.deliveryCharge.toNumber(),
+        })
+        return updatedOrder
+      })
+      return updatedOrder
+    } else {
+      const updatedOrder = await prisma.order.update({
+        where: { orderId },
+        data: {
+          orderStatus: OrderStatus.cancelled,
+          remarks: `${order.transactionId}=${remarks}`,
+        },
+      })
+      return updatedOrder
+    }
+  }
+  /**
+   * Process Order By Admin
+   * @param orderId - Order ID to be processed
+   * @return Updated order
+   * */
+  async processOrderByAdmin(orderId: number): Promise<Order> {
+    // [Backend Fetching Needed] Get order details
+    const order = await this.getOrderById(orderId)
 
-  //   if (order.orderStatus !== OrderStatus.approved) {
-  //     throw new ApiError(400, 'শুধুমাত্র অনুমোদিত অর্ডার প্রক্রিয়া করা যাবে')
-  //   }
-  //   // Update order status to processing
-  //   if (order.cancelledByUser) {
-  //     // Here We need to update the order status to cancelled , verify the transaction and add the amount to the seller wallets within transaction
-  //     const updatedOrder = await prisma.$transaction(async tx => {
-  //       const updatedOrder = await tx.order.update({
-  //         where: { orderId },
-  //         data: {
-  //           orderStatus: OrderStatus.refunded,
-  //           transactionVerified: true,
-  //         },
-  //       })
-  //       await transactionServices.refundOrderCancellation({
-  //         tx,
-  //         userId: order.sellerId,
-  //         amount: order.deliveryCharge!.toNumber(),
-  //       })
-  //       return updatedOrder
-  //     })
-  //     return updatedOrder
-  //   } else {
-  //     const updatedOrder = await prisma.order.update({
-  //       where: { orderId },
-  //       data: {
-  //         orderStatus: OrderStatus.processing,
-  //       },
-  //     })
+    if (order.orderStatus !== OrderStatus.pending) {
+      throw new ApiError(400, 'শুধুমাত্র পেন্ডিং অর্ডার প্রক্রিয়া করা যাবে')
+    }
+    // Update order status to processing
+    if (order.cancelledBySeller) {
+      await this.cancelOrderByAdmin(orderId, 'Order is cancelled by user')
+      return await this.getOrderById(orderId)
+    } else {
+      const updatedOrder = await prisma.order.update({
+        where: { orderId },
+        data: {
+          orderStatus: OrderStatus.processing,
+        },
+      })
 
-  //     return updatedOrder
-  //   }
-  // }
+      return updatedOrder
+    }
+  }
 
   // /**
   //  * Shipped Order By Admin
@@ -619,203 +631,282 @@ class OrderServices {
   //  * trackingURL - Tracking URL
   //  * @return Updated order
   //  */
-  // async shipOrderByAdmin(
-  //   orderId: number,
-  //   courierName: string,
-  //   trackingURL: string
-  // ): Promise<Order> {
-  //   // [Backend Fetching Needed] Get order details
-  //   const order = await this.getOrderById(orderId)
+  async shipOrderByAdmin(
+    orderId: number,
+    courierName: string,
+    trackingURL: string
+  ): Promise<Order> {
+    // [Backend Fetching Needed] Get order details
+    const order = await this.getOrderById(orderId)
 
-  //   if (order.orderStatus !== OrderStatus.processing) {
-  //     throw new ApiError(400, 'শুধুমাত্র প্রক্রিয়াধীন অর্ডার শিপ করা যাবে')
-  //   }
-  //   // Update order status to shipped
-  //   const updatedOrder = await prisma.order.update({
-  //     where: { orderId },
-  //     data: {
-  //       orderStatus: OrderStatus.shipped,
-  //       courierName,
-  //       trackingURL,
-  //     },
-  //   })
+    if (order.orderStatus !== OrderStatus.processing) {
+      throw new ApiError(400, 'শুধুমাত্র প্রক্রিয়াধীন অর্ডার শিপ করা যাবে')
+    }
+    // Update order status to shipped
+    const updatedOrder = await prisma.order.update({
+      where: { orderId },
+      data: {
+        orderStatus: OrderStatus.shipped,
+        courierName,
+        trackingURL,
+      },
+    })
 
-  //   return updatedOrder
-  // }
-  // /**
-  //  * Complete Order By Admin
-  //  * @param orderId - Order ID to be delivered
-  //  * amountPaidByCustomer - Amount paid by customer
-  //  * @return Updated order
-  //  */
-  // async completeOrderByAdmin(
-  //   orderId: number,
-  //   amountPaidByCustomer: number
-  // ): Promise<Order> {
-  //   // [Backend Fetching Needed] Get order details
-  //   const order = await this.getOrderById(orderId)
+    return updatedOrder
+  }
+  /**
+   * Complete Order By Admin
+   * @param orderId - Order ID to be delivered
+   * amountPaidByCustomer - Amount paid by customer
+   * @return Updated order
+   */
+  async completeOrderByAdmin(
+    orderId: number,
+    amountPaidByCustomer: number
+  ): Promise<Order> {
+    // [Backend Fetching Needed] Get order details
+    const order = await this.getOrderById(orderId)
 
-  //   if (order.orderStatus !== OrderStatus.shipped) {
-  //     throw new ApiError(400, 'শুধুমাত্র শিপ করা অর্ডার সম্পন্ন করা যাবে')
-  //   }
-  //   // Update order status to completed and add the amount to the seller wallets within transaction
-  //   if (amountPaidByCustomer < order.totalProductBasePrice.toNumber()) {
-  //     throw new ApiError(400, 'প্রদত্ত পরিমাণ পণ্যের মোট বেস মূল্যের চেয়ে কম')
-  //   }
-  //   const actualCommission =
-  //     amountPaidByCustomer - order.totalProductBasePrice.toNumber()
-  //   const updatedOrder = await prisma.$transaction(async tx => {
-  //     const updatedOrder = await tx.order.update({
-  //       where: { orderId },
-  //       data: {
-  //         orderStatus: OrderStatus.completed,
-  //         totalAmountPaidByCustomer: amountPaidByCustomer,
-  //         actualCommission,
-  //       },
-  //     })
-  //     // count how many order are completed
-  //     const completedOrdersCount = await tx.order.count({
-  //       where: {
-  //         orderStatus: OrderStatus.completed,
-  //         sellerId: order.sellerId,
-  //       },
-  //     })
-  //     // verify the seller
-  //     const isVerified =
-  //       completedOrdersCount >= config.minimumOrderCompletedToBeVerified
-  //         ? true
-  //         : false
-  //     await tx.user.update({
-  //       where: { userId: order.sellerId },
-  //       data: { isVerified },
-  //     })
+    if (order.orderStatus !== OrderStatus.shipped) {
+      throw new ApiError(400, 'শুধুমাত্র শিপ করা অর্ডার সম্পন্ন করা যাবে')
+    }
+    // Update order status to completed and add the amount to the seller wallets within transaction
+    if (amountPaidByCustomer < order.totalProductBasePrice.toNumber()) {
+      throw new ApiError(400, 'প্রদত্ত পরিমাণ পণ্যের মোট বেস মূল্যের চেয়ে কম')
+    }
+    const actualCommission =
+      amountPaidByCustomer - order.totalProductBasePrice.toNumber()
+    const updatedOrder = await prisma.$transaction(async tx => {
+      const updatedOrder = await tx.order.update({
+        where: { orderId },
+        data: {
+          orderStatus: OrderStatus.completed,
+          totalAmountPaidByCustomer: amountPaidByCustomer,
+          actualCommission,
+        },
+      })
+      // count how many order are completed
+      const completedOrdersCount = await tx.order.count({
+        where: {
+          orderStatus: OrderStatus.completed,
+          sellerId: order.sellerId,
+        },
+      })
+      // verify the seller
+      const isVerified =
+        completedOrdersCount >= config.minimumOrderCompletedToBeVerified
+          ? true
+          : false
+      await tx.user.update({
+        where: { userId: order.sellerId },
+        data: { isVerified },
+      })
 
-  //     await transactionServices.addSellerCommission({
-  //       tx,
-  //       userId: order.sellerId,
-  //       amount: actualCommission,
-  //       userName: order.sellerName,
-  //       userPhoneNo: order.sellerPhoneNo,
-  //     })
-  //     await transactionServices.returnDeliveryChargeAfterOrderCompletion({
-  //       tx,
-  //       amount: order.deliveryCharge.toNumber(),
-  //       userName: order.sellerName,
-  //       userPhoneNo: order.sellerPhoneNo,
-  //       userId: order.sellerId,
-  //     })
+      await transactionServices.addSellerCommission({
+        tx,
+        userId: order.sellerId,
+        amount: actualCommission,
+        userName: order.sellerName,
+        userPhoneNo: order.sellerPhoneNo,
+      })
+      // await transactionServices.returnDeliveryChargeAfterOrderCompletion({
+      //   tx,
+      //   amount: order.deliveryCharge.toNumber(),
+      //   userName: order.sellerName,
+      //   userPhoneNo: order.sellerPhoneNo,
+      //   userId: order.sellerId,
+      // })
+      // find the seller referrer and add referral commission if exists
+      const seller = await userServices.getUserDetailByUserId({
+        tx,
+        userId: order.sellerId,
+      })
+      const referrer = seller.referredBy
+      if (referrer) {
+        const referralCommission = referralService.calculateReferralCommission(
+          1,
+          order.totalProductBasePrice.toNumber()
+        )
+        await transactionServices.addReferralCommission({
+          tx,
+          userId: referrer.userId,
+          amount: referralCommission,
+          userName: referrer.name,
+          userPhoneNo: referrer.phoneNo,
+          referralLevel: 1,
+          reference: JSON.stringify({
+            name: order.sellerName,
+            phoneNo: order.sellerPhoneNo,
+            orderId: order.orderId,
+            orderAmount: order.totalProductBasePrice.toNumber(),
+            orderCommission: referralCommission,
+            orderDate: order.orderCreatedAt,
+            referralLevel: 1,
+          }),
+        })
+      }
 
-  //     return updatedOrder
-  //   })
-  //   return updatedOrder
-  // }
+      return updatedOrder
+    })
+    return updatedOrder
+  }
 
-  // /**
-  //  * Return orders by Admin
-  //  * @param orderId - Order ID to be returned
-  //  * @return Updated order
-  //  * */
-  // async returnOrderByAdmin(orderId: number): Promise<Order> {
-  //   // [Backend Fetching Needed] Get order details
-  //   const order = await this.getOrderById(orderId)
+  /**
+   * Return orders by Admin
+   * @param orderId - Order ID to be returned
+   * @return Updated order
+   * */
+  async returnOrderByAdmin(orderId: number): Promise<Order> {
+    // [Backend Fetching Needed] Get order details
+    const order = await this.getOrderById(orderId)
 
-  //   if (order.orderStatus !== OrderStatus.shipped) {
-  //     throw new ApiError(400, 'শুধুমাত্র শিপ করা অর্ডার ফেরত দেওয়া যাবে')
-  //   }
-  //   // Update order status to returned and add the amount to the seller wallets within transaction
-  //   const updatedOrder = await prisma.order.update({
-  //     where: { orderId },
-  //     data: {
-  //       orderStatus: OrderStatus.returned,
-  //     },
-  //   })
+    if (order.orderStatus !== OrderStatus.shipped) {
+      throw new ApiError(400, 'শুধুমাত্র শিপ করা অর্ডার ফেরত দেওয়া যাবে')
+    }
+    // Update order status to returned and add the amount to the seller wallets within transaction
+    if (!order.isDeliveryChargePaidBySeller) {
+      // update the order status to returned and deduct the amount from the seller wallets within transaction
+      const updatedOrder = await prisma.$transaction(async tx => {
+        const updatedOrder = await tx.order.update({
+          where: { orderId },
+          data: {
+            orderStatus: OrderStatus.returned,
+          },
+        })
+        await transactionServices.deductDeliveryChargeForOrder({
+          tx,
+          userId: order.sellerId,
+          amount: order.deliveryCharge.toNumber(),
+          remarks: 'অর্ডার ফেরত আসার কারণে ডেলিভারি চার্জ কাটা হয়েছে',
+        })
+        return updatedOrder
+      })
+      return updatedOrder
+    }
+    const updatedOrder = await prisma.order.update({
+      where: { orderId },
+      data: {
+        orderStatus: OrderStatus.returned,
+      },
+    })
+    return updatedOrder
+  }
+  async faultyOrderByAdmin(orderId: number, remarks?: string): Promise<Order> {
+    // [Backend Fetching Needed] Get order details
+    const order = await this.getOrderById(orderId)
 
-  //   return updatedOrder
-  // }
-  // /**
-  //  * Get all orders by user ID with pagination and filtering by status, status may be an array or string
-  //  * @param sellerId - Seller ID to fetch orders for
-  //  * @return List of orders
-  //  */
-  // async getOrdersByUserId({
-  //   sellerId,
-  //   status,
-  //   page = 1,
-  //   pageSize = 10,
-  // }: {
-  //   sellerId: string
-  //   status?: OrderStatus | OrderStatus[]
-  //   page?: number
-  //   pageSize?: number
-  // }) {
-  //   const orders = await prisma.order.findMany({
-  //     where: {
-  //       sellerId,
-  //       ...(status && {
-  //         orderStatus: Array.isArray(status) ? { in: status } : status,
-  //       }),
-  //     },
-  //     include: { orderProducts: true },
-  //     skip: (page - 1) * pageSize,
-  //     take: pageSize,
-  //     orderBy: {
-  //       orderCreatedAt: 'desc',
-  //     },
-  //   })
-  //   const totalOrders = await prisma.order.count({
-  //     where: {
-  //       sellerId,
-  //       ...(status && {
-  //         orderStatus: Array.isArray(status) ? { in: status } : status,
-  //       }),
-  //     },
-  //   })
-  //   const totalPages = Math.ceil(totalOrders / pageSize)
-  //   return {
-  //     orders,
-  //     totalOrders,
-  //     totalPages,
-  //     currentPage: page,
-  //     pageSize,
-  //   }
-  // }
-  // async getOrdersForAdmin({
-  //   status,
-  //   page = 1,
-  //   pageSize = 10,
-  // }: {
-  //   status?: OrderStatus | OrderStatus[]
-  //   page?: number
-  //   pageSize?: number
-  // }) {
-  //   const orders = await prisma.order.findMany({
-  //     where: {
-  //       ...(status && {
-  //         orderStatus: Array.isArray(status) ? { in: status } : status,
-  //       }),
-  //     },
-  //     include: { orderProducts: true },
-  //     skip: (page - 1) * pageSize,
-  //     take: pageSize,
-  //     orderBy: {
-  //       orderCreatedAt: 'desc',
-  //     },
-  //   })
-  //   const totalOrders = await prisma.order.count({
-  //     where: {
-  //       ...(status && {
-  //         orderStatus: Array.isArray(status) ? { in: status } : status,
-  //       }),
-  //     },
-  //   })
-  //   const totalPages = Math.ceil(totalOrders / pageSize)
-  //   return {
-  //     orders,
-  //     totalOrders,
-  //     totalPages,
-  //     currentPage: page,
-  //     pageSize,
-  //   }
-  // }
+    if (order.orderStatus !== OrderStatus.shipped) {
+      throw new ApiError(400, 'শুধুমাত্র শিপ করা অর্ডার ফল্টি করা যাবে')
+    }
+    // Update order status to returned and add the amount to the seller wallets within transaction
+    const updatedOrder = await prisma.order.update({
+      where: { orderId },
+      data: {
+        orderStatus: OrderStatus.faulty,
+        remarks,
+      },
+    })
+    return updatedOrder
+  }
+  async reOrderFaulty(orderId: number): Promise<Order> {
+    // [Backend Fetching Needed] Get order details
+    const order = await this.getOrderById(orderId)
+
+    if (order.orderStatus !== OrderStatus.faulty) {
+      throw new ApiError(400, 'শুধুমাত্র ফল্টি অর্ডার পুনরায় অর্ডার করা যাবে')
+    }
+    const updatedOrder = await prisma.order.update({
+      where: { orderId },
+      data: {
+        orderStatus: OrderStatus.pending,
+      },
+    })
+    return updatedOrder
+  }
+  /**
+   * Get all orders by user ID with pagination and filtering by status, status may be an array or string
+   * @param sellerId - Seller ID to fetch orders for
+   * @return List of orders
+   */
+  async getOrdersByUserId({
+    sellerId,
+    status,
+    page = 1,
+    pageSize = 10,
+  }: {
+    sellerId: string
+    status?: OrderStatus | OrderStatus[]
+    page?: number
+    pageSize?: number
+  }) {
+    const orders = await prisma.order.findMany({
+      where: {
+        sellerId,
+        ...(status && {
+          orderStatus: Array.isArray(status) ? { in: status } : status,
+        }),
+      },
+      include: { orderProducts: true },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      orderBy: {
+        orderCreatedAt: 'desc',
+      },
+    })
+    const totalOrders = await prisma.order.count({
+      where: {
+        sellerId,
+        ...(status && {
+          orderStatus: Array.isArray(status) ? { in: status } : status,
+        }),
+      },
+    })
+    const totalPages = Math.ceil(totalOrders / pageSize)
+    return {
+      orders,
+      totalOrders,
+      totalPages,
+      currentPage: page,
+      pageSize,
+    }
+  }
+  async getOrdersForAdmin({
+    status,
+    page = 1,
+    pageSize = 10,
+  }: {
+    status?: OrderStatus | OrderStatus[]
+    page?: number
+    pageSize?: number
+  }) {
+    const orders = await prisma.order.findMany({
+      where: {
+        ...(status && {
+          orderStatus: Array.isArray(status) ? { in: status } : status,
+        }),
+      },
+      include: { orderProducts: true },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+      orderBy: {
+        orderCreatedAt: 'desc',
+      },
+    })
+    const totalOrders = await prisma.order.count({
+      where: {
+        ...(status && {
+          orderStatus: Array.isArray(status) ? { in: status } : status,
+        }),
+      },
+    })
+    const totalPages = Math.ceil(totalOrders / pageSize)
+    return {
+      orders,
+      totalOrders,
+      totalPages,
+      currentPage: page,
+      pageSize,
+    }
+  }
 }
 export default new OrderServices()

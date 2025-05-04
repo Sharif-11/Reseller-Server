@@ -13,15 +13,74 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const client_1 = require("@prisma/client");
-const prisma_1 = __importDefault(require("../utils/prisma"));
-const user_services_1 = __importDefault(require("./user.services"));
-const ApiError_1 = __importDefault(require("../utils/ApiError"));
-const wallet_services_1 = __importDefault(require("./wallet.services"));
-const product_services_1 = __importDefault(require("./product.services"));
-const order_utils_1 = require("../utils/order.utils");
-const transaction_services_1 = __importDefault(require("./transaction.services"));
+const decimal_js_1 = __importDefault(require("decimal.js"));
 const config_1 = __importDefault(require("../config"));
+const ApiError_1 = __importDefault(require("../utils/ApiError"));
+const prisma_1 = __importDefault(require("../utils/prisma"));
+const commission_utils_1 = __importDefault(require("./commission.utils"));
+const payment_services_1 = __importDefault(require("./payment.services"));
+const product_services_1 = __importDefault(require("./product.services"));
+const transaction_services_1 = __importDefault(require("./transaction.services"));
+const user_services_1 = __importDefault(require("./user.services"));
+const wallet_services_1 = __importDefault(require("./wallet.services"));
 class OrderServices {
+    calculateExtraDeliveryCharge(productCount) {
+        if (productCount <= 3)
+            return 0;
+        if (productCount === 4)
+            return 10;
+        // For 5+ products: 10 tk for the 4th product + 5 tk for every 2 additional products
+        const additionalProducts = productCount - 4;
+        let temp = 0;
+        if (additionalProducts % 2 === 0) {
+            temp = (additionalProducts / 2) * 5;
+        }
+        else {
+            temp = ((additionalProducts - 1) / 2) * 5;
+        }
+        return 10 + temp;
+    }
+    deriveProductsSummary(products) {
+        const totalProductQuantity = products.reduce((total, product) => total + product.productQuantity, 0);
+        const totalProductBasePrice = products.reduce((total, product) => total.plus(product.productTotalBasePrice.toNumber()), new decimal_js_1.default(0));
+        const totalProductSellingPrice = products.reduce((total, product) => total + product.productTotalSellingPrice, 0);
+        const totalCommission = products.reduce((total, product) => total
+            .plus(product.productTotalSellingPrice)
+            .minus(product.productTotalBasePrice.toNumber()), new decimal_js_1.default(0));
+        const totalAmount = products.reduce((total, product) => total + product.productTotalSellingPrice, 0);
+        return {
+            totalProductQuantity,
+            totalProductBasePrice,
+            totalProductSellingPrice,
+            totalCommission,
+            totalAmount,
+            actualCommission: totalCommission.toNumber(),
+            extraDeliveryCharge: this.calculateExtraDeliveryCharge(totalProductQuantity),
+        };
+    }
+    verifyOrderProducts(products) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const productPremises = products.map((product) => __awaiter(this, void 0, void 0, function* () {
+                const { productId, name: productName, basePrice: productBasePrice, images, published, } = yield product_services_1.default.getProduct(product.productId);
+                const isValidImage = images.some(image => image.imageUrl === product.productImage);
+                if (!published) {
+                    throw new ApiError_1.default(400, 'Hidden product cannot be ordered');
+                }
+                if (!isValidImage) {
+                    throw new ApiError_1.default(400, 'Invalid product image');
+                }
+                return Object.assign(Object.assign({}, product), { productName,
+                    productBasePrice, productTotalBasePrice: productBasePrice.times(product.productQuantity), productTotalSellingPrice: product.productSellingPrice * product.productQuantity });
+            }));
+            try {
+                yield Promise.all(productPremises);
+                return true;
+            }
+            catch (error) {
+                return false;
+            }
+        });
+    }
     /**
      * Create order from frontend data (dummy implementation)
      * @param frontendData - Minimal order data from frontend
@@ -32,12 +91,11 @@ class OrderServices {
         return __awaiter(this, void 0, void 0, function* () {
             // [Backend Fetching Needed] Get complete seller info
             const seller = yield user_services_1.default.getUserByUserId(sellerId);
-            const { name: sellerName, phoneNo: sellerPhoneNo, balance: sellerBalance, isVerified: sellerVerified, shopName: sellerShopName } = seller;
-            // [Backend Fetching Needed] Get admin wallet info
+            const { name: sellerName, phoneNo: sellerPhoneNo, balance: sellerBalance, isVerified: sellerVerified, shopName: sellerShopName, } = seller;
             // [Backend Fetching Needed] Get product details (name, image, base price) for each product
             const enrichedProductsPromise = frontendData.products.map((product) => __awaiter(this, void 0, void 0, function* () {
-                const { productId, name: productName, basePrice: productBasePrice, images, published } = yield product_services_1.default.getProduct(product.productId);
-                const isValidImage = images.some((image) => image.imageUrl === product.productImage);
+                const { productId, name: productName, basePrice: productBasePrice, images, published, } = yield product_services_1.default.getProduct(product.productId);
+                const isValidImage = images.some(image => image.imageUrl === product.productImage);
                 if (!published) {
                     throw new ApiError_1.default(400, 'Hidden product cannot be ordered');
                 }
@@ -48,108 +106,135 @@ class OrderServices {
                     productBasePrice, productTotalBasePrice: productBasePrice.times(product.productQuantity), productTotalSellingPrice: product.productSellingPrice * product.productQuantity });
             }));
             const enrichedProducts = yield Promise.all(enrichedProductsPromise);
-            const { totalAmount, totalCommission, totalProductBasePrice, totalProductQuantity, totalProductSellingPrice } = (0, order_utils_1.calculateProductsSummary)(enrichedProducts);
-            const actualCommission = totalCommission;
-            const { needsPayment, amountToPay, deliveryCharge } = (0, order_utils_1.calculateAmountToPay)({
-                zilla: frontendData.customerZilla,
-                isVerified: seller.isVerified,
-                sellerBalance: sellerBalance.toNumber(),
-                productCount: totalProductQuantity
-            });
-            if (needsPayment && !frontendData.isDeliveryChargePaidBySeller) {
-                throw new ApiError_1.default(400, 'Delivery charge must be paid');
+            const { totalProductQuantity, totalProductBasePrice, totalProductSellingPrice, totalCommission, totalAmount, actualCommission, extraDeliveryCharge, } = this.deriveProductsSummary(enrichedProducts);
+            const totalDeliveryCharge = frontendData.customerZilla
+                .toLowerCase()
+                .includes('dhaka')
+                ? config_1.default.deliveryChargeInsideDhaka
+                : config_1.default.deliveryChargeOutsideDhaka + extraDeliveryCharge;
+            if (sellerBalance.toNumber() < 0 &&
+                !frontendData.isDeliveryChargePaidBySeller) {
+                throw new ApiError_1.default(400, 'You need to add balance to your wallet');
             }
-            if (needsPayment && frontendData.isDeliveryChargePaidBySeller &&
-                (frontendData.deliveryChargePaidBySeller === undefined ||
-                    frontendData.deliveryChargePaidBySeller < amountToPay)) {
-                throw new ApiError_1.default(400, 'The Amount Paid is not enough');
+            if (!sellerVerified) {
+                if (sellerBalance.toNumber() < totalDeliveryCharge &&
+                    !frontendData.isDeliveryChargePaidBySeller) {
+                    throw new ApiError_1.default(400, 'You needs to pay the delivery charge in advance or add balance to your wallet');
+                }
             }
-            let adminWalletId = null;
+            if (frontendData.isDeliveryChargePaidBySeller) {
+                if (frontendData.deliveryChargePaidBySeller < totalDeliveryCharge) {
+                    throw new ApiError_1.default(400, 'Insufficient delivery charge paid by seller');
+                }
+            }
+            // get admin wallet info
             let adminWalletName = null;
             let adminWalletPhoneNo = null;
-            if (needsPayment && frontendData.isDeliveryChargePaidBySeller) {
-                const { walletId, walletName, walletPhoneNo } = yield wallet_services_1.default.getWalletById(frontendData.adminWalletId);
-                const existingTransactionId = yield prisma_1.default.order.findFirst({
-                    where: {
-                        transactionId: frontendData.transactionId,
-                    }
-                });
-                console.log('existingTransactionId', existingTransactionId);
-                if (existingTransactionId) {
-                    throw new ApiError_1.default(400, 'Transaction ID already exists');
+            if (frontendData.adminWalletId) {
+                const adminWallet = yield wallet_services_1.default.getWalletById(frontendData.adminWalletId);
+                if (adminWallet) {
+                    adminWalletName = adminWallet.walletName;
+                    adminWalletPhoneNo = adminWallet.walletPhoneNo;
                 }
-                adminWalletId = walletId;
-                adminWalletName = walletName;
-                adminWalletPhoneNo = walletPhoneNo;
+                else {
+                    throw new ApiError_1.default(400, 'Invalid admin wallet ID');
+                }
             }
+            // we need to create the order within transaction, here we need to create a payment record also for the order
+            const isDeductBalance = !sellerVerified &&
+                !frontendData.isDeliveryChargePaidBySeller &&
+                sellerBalance.toNumber() >= totalDeliveryCharge;
             try {
-                const order = yield prisma_1.default.order.create({
-                    data: {
-                        // Seller info (from backend)
-                        sellerId,
-                        sellerName,
-                        sellerPhoneNo,
-                        sellerVerified,
-                        sellerShopName,
-                        sellerBalance,
-                        // Customer info (from frontend)
-                        customerName: frontendData.customerName,
-                        customerPhoneNo: frontendData.customerPhoneNo,
-                        customerZilla: frontendData.customerZilla,
-                        customerUpazilla: frontendData.customerUpazilla,
-                        deliveryAddress: frontendData.deliveryAddress,
-                        comments: frontendData.comments,
-                        // Payment info
-                        deliveryCharge,
-                        isDeliveryChargePaidBySeller: frontendData.isDeliveryChargePaidBySeller,
-                        deliveryChargeMustBePaidBySeller: amountToPay,
-                        deliveryChargePaidBySeller: amountToPay,
-                        transactionId: frontendData.transactionId,
-                        sellerWalletName: frontendData.sellerWalletName,
-                        sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo,
-                        // Admin wallet info (from backend)
-                        adminWalletId,
-                        adminWalletName,
-                        adminWalletPhoneNo,
-                        // Calculated totals
-                        totalAmount,
-                        totalCommission,
-                        actualCommission,
-                        totalProductBasePrice,
-                        totalProductSellingPrice,
-                        totalProductQuantity,
-                        // Products
-                        orderProducts: {
-                            create: enrichedProducts.map(product => ({
-                                productId: product.productId,
-                                productName: product.productName,
-                                productImage: product.productImage,
-                                productBasePrice: product.productBasePrice,
-                                productSellingPrice: product.productSellingPrice,
-                                productQuantity: product.productQuantity,
-                                productTotalBasePrice: product.productBasePrice.times(product.productQuantity),
-                                productTotalSellingPrice: product.productSellingPrice * product.productQuantity,
-                                selectedOptions: product.selectedOptions
-                            }))
+                const order = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                    // Create order
+                    const createdOrder = yield tx.order.create({
+                        data: {
+                            customerName: frontendData.customerName,
+                            customerPhoneNo: frontendData.customerPhoneNo,
+                            customerZilla: frontendData.customerZilla,
+                            customerUpazilla: frontendData.customerUpazilla,
+                            deliveryAddress: frontendData.deliveryAddress,
+                            comments: frontendData.comments,
+                            totalProductQuantity,
+                            totalProductBasePrice,
+                            totalProductSellingPrice,
+                            totalCommission,
+                            totalAmount,
+                            actualCommission,
+                            sellerId,
+                            sellerName,
+                            sellerPhoneNo,
+                            sellerShopName,
+                            sellerVerified,
+                            sellerBalance,
+                            orderStatus: frontendData.isDeliveryChargePaidBySeller
+                                ? 'unverified'
+                                : 'pending',
+                            adminWalletId: frontendData.adminWalletId,
+                            isDeliveryChargePaidBySeller: frontendData.isDeliveryChargePaidBySeller,
+                            deliveryChargePaidBySeller: frontendData.deliveryChargePaidBySeller || null,
+                            transactionId: frontendData.transactionId || null,
+                            adminWalletName: adminWalletName || null,
+                            adminWalletPhoneNo: adminWalletPhoneNo || null,
+                            sellerWalletName: frontendData.sellerWalletName || null,
+                            sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo || null,
+                            deliveryCharge: totalDeliveryCharge,
+                            cashOnAmount: frontendData.isDeliveryChargePaidBySeller || isDeductBalance
+                                ? totalAmount
+                                : totalAmount + totalDeliveryCharge,
+                            orderProducts: {
+                                create: enrichedProducts.map(product => ({
+                                    productId: product.productId,
+                                    productName: product.productName,
+                                    productBasePrice: product.productBasePrice,
+                                    productImage: product.productImage,
+                                    productSellingPrice: product.productSellingPrice,
+                                    selectedOptions: product.selectedOptions,
+                                    productQuantity: product.productQuantity,
+                                    productTotalBasePrice: product.productTotalBasePrice,
+                                    productTotalSellingPrice: product.productTotalSellingPrice,
+                                })),
+                            },
+                        },
+                    });
+                    // Create order products
+                    if (frontendData.isDeliveryChargePaidBySeller) {
+                        try {
+                            yield payment_services_1.default.createOrderPaymentRequest({
+                                tx,
+                                amount: frontendData.deliveryChargePaidBySeller,
+                                transactionId: frontendData.transactionId,
+                                sellerWalletName: frontendData.sellerWalletName,
+                                sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo,
+                                adminWalletId: frontendData.adminWalletId,
+                                adminWalletName: adminWalletName,
+                                adminWalletPhoneNo: adminWalletPhoneNo,
+                                sellerId,
+                                sellerName,
+                                sellerPhoneNo,
+                                orderId: createdOrder.orderId,
+                            });
                         }
-                    },
-                    include: {
-                        orderProducts: true
+                        catch (error) {
+                            console.log('Error creating order payment request:', error);
+                            throw error;
+                        }
                     }
-                });
-                if (!needsPayment) {
-                    try {
-                        yield this.approveOrderByAdmin({ orderId: order.orderId });
+                    if (isDeductBalance) {
+                        // we need to create a transaction record for the delivery charge deduction
+                        yield transaction_services_1.default.deductDeliveryChargeForOrder({
+                            tx,
+                            userId: sellerId,
+                            amount: totalDeliveryCharge,
+                            remarks: 'অর্ডার ভেরিফিকেশনের জন্য ডেলিভারি চার্জ কাটা হয়েছে',
+                        });
                     }
-                    catch (error) {
-                        // handle error
-                        console.log('Error approving order:', error);
-                    }
-                }
+                    return createdOrder;
+                }));
                 return order;
             }
             catch (error) {
-                throw new ApiError_1.default(500, 'Failed to create order');
+                throw error;
             }
         });
     }
@@ -162,185 +247,189 @@ class OrderServices {
         return __awaiter(this, void 0, void 0, function* () {
             const order = yield prisma_1.default.order.findUnique({
                 where: { orderId },
-                include: { orderProducts: true }
+                include: { orderProducts: true },
             });
             if (!order) {
-                throw new ApiError_1.default(404, 'Order not found');
+                throw new ApiError_1.default(404, 'অর্ডার পাওয়া যায়নি');
             }
             return order;
         });
     }
-    /**
-     * Approve Order By Admin
-     * @param orderId - Order ID to be approved
-     * @return Updated order
-     */
-    approveOrderByAdmin(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ orderId, transactionId }) {
-            var _b;
-            // [Backend Fetching Needed] Get order details
-            const order = yield this.getOrderById(orderId);
-            if (order.orderStatus !== client_1.OrderStatus.pending) {
-                throw new ApiError_1.default(400, 'শুধুমাত্র পেন্ডিং অর্ডার অনুমোদন করা যাবে');
-            }
-            if (order.transactionVerified) {
-                throw new ApiError_1.default(400, 'অর্ডার ইতোমধ্যে যাচাই করা হয়েছে');
-            }
-            // Check if the transaction ID matches the order's transaction ID
-            if (order.isDeliveryChargePaidBySeller && order.transactionId !== transactionId) {
-                throw new ApiError_1.default(400, 'ট্রানজেকশন আইডি মিলছে না');
-            }
-            // Check if the order is already is cancelled by user 
-            if (order.cancelledByUser) {
-                // Here We need to update the order status to cancelled , verify the transaction and add the amount to the seller wallets within transaction
-                if (order.isDeliveryChargePaidBySeller) {
-                    const updatedOrder = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
-                        const updatedOrder = yield tx.order.update({
-                            where: { orderId },
-                            data: {
-                                orderStatus: client_1.OrderStatus.refunded,
-                                transactionVerified: true,
-                            },
-                        });
-                        yield transaction_services_1.default.refundOrderCancellation({
-                            tx,
-                            userId: order.sellerId,
-                            amount: order.deliveryChargePaidBySeller.toNumber(),
-                        });
-                        return updatedOrder;
-                    }));
-                    return updatedOrder;
-                }
-                else {
-                    const updatedOrder = yield prisma_1.default.order.update({
-                        where: { orderId },
-                        data: {
-                            orderStatus: client_1.OrderStatus.cancelled,
-                            transactionVerified: true,
-                        },
-                    });
-                    return updatedOrder;
-                }
-            }
-            const { deductFromBalance, addToBalance } = (0, order_utils_1.calculateAmountToDeductOrAddForOrder)({
-                isDeliveryChargePaidBySeller: order.isDeliveryChargePaidBySeller,
-                deliveryChargePaidBySeller: ((_b = order.deliveryChargePaidBySeller) === null || _b === void 0 ? void 0 : _b.toNumber()) || null,
-                totalDeliveryCharge: order.deliveryCharge.toNumber(),
-            });
-            if (deductFromBalance) {
-                // here we need to update use and deduct from balance as order deposit within transaction
-                const updatedOrder = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
-                    const updatedOrder = yield tx.order.update({
-                        where: { orderId },
-                        data: {
-                            orderStatus: client_1.OrderStatus.approved,
-                            transactionVerified: true,
-                        },
-                    });
-                    yield transaction_services_1.default.deductDeliveryChargeForOrderApproval({
-                        tx,
-                        userId: order.sellerId,
-                        amount: deductFromBalance,
-                    });
-                    return updatedOrder;
-                }));
-                return updatedOrder;
-            }
-            else if (addToBalance) {
-                // update the order status to approved and add the amount to the seller wallets within transaction
-                const updatedOrder = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
-                    const updatedOrder = yield tx.order.update({
-                        where: { orderId },
-                        data: {
-                            orderStatus: client_1.OrderStatus.approved,
-                            transactionVerified: true,
-                        },
-                    });
-                    yield transaction_services_1.default.compensateDue({
-                        tx,
-                        userId: order.sellerId,
-                        amount: addToBalance,
-                        transactionId: order.transactionId,
-                        paymentPhoneNo: order.sellerWalletPhoneNo,
-                        paymentMethod: order.sellerWalletName,
-                    });
-                    return updatedOrder;
-                }));
-                return updatedOrder;
-            }
-            else {
-                const updatedOrder = yield prisma_1.default.order.update({
-                    where: { orderId },
-                    data: {
-                        orderStatus: client_1.OrderStatus.approved,
-                        transactionVerified: true,
-                    },
-                });
-                return updatedOrder;
-            }
-        });
-    }
-    /**
-     * Reject Order By Admin
-     * @param orderId - Order ID to be rejected
-     * @return Updated order
-      */
-    rejectOrderByAdmin(orderId, remarks) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // [Backend Fetching Needed] Get order details
-            const order = yield this.getOrderById(orderId);
-            if (order.orderStatus !== client_1.OrderStatus.pending) {
-                throw new ApiError_1.default(400, 'শুধুমাত্র পেন্ডিং অর্ডার বাতিল করা যাবে');
-            }
-            if (order.transactionVerified) {
-                throw new ApiError_1.default(400, 'অর্ডার ইতোমধ্যে যাচাই করা হয়েছে');
-            }
-            if (order.cancelledByUser) {
-                // delete the order  along with the products
-                const deletedOrder = yield prisma_1.default.order.delete({
-                    where: { orderId },
-                    include: { orderProducts: true }
-                });
-                return deletedOrder;
-            }
-            // Update order status to rejected
-            else {
-                const updatedOrder = yield prisma_1.default.order.update({
-                    where: { orderId },
-                    data: {
-                        orderStatus: client_1.OrderStatus.rejected,
-                        transactionId: null,
-                        remarks: `${order.transactionId}=${remarks}`,
-                    },
-                });
-                return updatedOrder;
-            }
-        });
-    }
-    /**
-     * Cancel Order By Seller
-     * @param orderId - Order ID to be cancelled
-     * @return Updated order
-     * */
+    // /**
+    //  * Approve Order By Admin
+    //  * @param orderId - Order ID to be approved
+    //  * @return Updated order
+    //  */
+    // async approveOrderByAdmin({
+    //   orderId,
+    //   transactionId,
+    // }: {
+    //   orderId: number
+    //   transactionId?: string
+    // }): Promise<Order> {
+    //   // [Backend Fetching Needed] Get order details
+    //   const order = await this.getOrderById(orderId)
+    //   if (order.orderStatus !== OrderStatus.pending) {
+    //     throw new ApiError(400, 'শুধুমাত্র পেন্ডিং অর্ডার অনুমোদন করা যাবে')
+    //   }
+    //   if (order.transactionVerified) {
+    //     throw new ApiError(400, 'অর্ডার ইতোমধ্যে যাচাই করা হয়েছে')
+    //   }
+    //   // Check if the transaction ID matches the order's transaction ID
+    //   if (
+    //     order.isDeliveryChargePaidBySeller &&
+    //     order.transactionId !== transactionId
+    //   ) {
+    //     throw new ApiError(400, 'ট্রানজেকশন আইডি মিলছে না')
+    //   }
+    //   // Check if the order is already is cancelled by user
+    //   if (order.cancelledByUser) {
+    //     // Here We need to update the order status to cancelled , verify the transaction and add the amount to the seller wallets within transaction
+    //     if (order.isDeliveryChargePaidBySeller) {
+    //       const updatedOrder = await prisma.$transaction(async tx => {
+    //         const updatedOrder = await tx.order.update({
+    //           where: { orderId },
+    //           data: {
+    //             orderStatus: OrderStatus.refunded,
+    //             transactionVerified: true,
+    //           },
+    //         })
+    //         await transactionServices.refundOrderCancellation({
+    //           tx,
+    //           userId: order.sellerId,
+    //           amount: order.deliveryChargePaidBySeller!.toNumber(),
+    //         })
+    //         return updatedOrder
+    //       })
+    //       return updatedOrder
+    //     } else {
+    //       const updatedOrder = await prisma.order.update({
+    //         where: { orderId },
+    //         data: {
+    //           orderStatus: OrderStatus.cancelled,
+    //           transactionVerified: true,
+    //         },
+    //       })
+    //       return updatedOrder
+    //     }
+    //   }
+    //   const { deductFromBalance, addToBalance } =
+    //     calculateAmountToDeductOrAddForOrder({
+    //       isDeliveryChargePaidBySeller: order.isDeliveryChargePaidBySeller,
+    //       deliveryChargePaidBySeller:
+    //         order.deliveryChargePaidBySeller?.toNumber() || null,
+    //       totalDeliveryCharge: order.deliveryCharge.toNumber(),
+    //     })
+    //   if (deductFromBalance) {
+    //     // here we need to update use and deduct from balance as order deposit within transaction
+    //     const updatedOrder = await prisma.$transaction(async tx => {
+    //       const updatedOrder = await tx.order.update({
+    //         where: { orderId },
+    //         data: {
+    //           orderStatus: OrderStatus.approved,
+    //           transactionVerified: true,
+    //         },
+    //       })
+    //       await transactionServices.deductDeliveryChargeForOrderApproval({
+    //         tx,
+    //         userId: order.sellerId,
+    //         amount: deductFromBalance,
+    //       })
+    //       return updatedOrder
+    //     })
+    //     return updatedOrder
+    //   } else if (addToBalance) {
+    //     // update the order status to approved and add the amount to the seller wallets within transaction
+    //     const updatedOrder = await prisma.$transaction(async tx => {
+    //       const updatedOrder = await tx.order.update({
+    //         where: { orderId },
+    //         data: {
+    //           orderStatus: OrderStatus.approved,
+    //           transactionVerified: true,
+    //         },
+    //       })
+    //       await transactionServices.compensateDue({
+    //         tx,
+    //         userId: order.sellerId,
+    //         amount: addToBalance,
+    //         transactionId: order.transactionId!,
+    //         paymentPhoneNo: order.sellerWalletPhoneNo!,
+    //         paymentMethod: order.sellerWalletName!,
+    //       })
+    //       return updatedOrder
+    //     })
+    //     return updatedOrder
+    //   } else {
+    //     const updatedOrder = await prisma.order.update({
+    //       where: { orderId },
+    //       data: {
+    //         orderStatus: OrderStatus.approved,
+    //         transactionVerified: true,
+    //       },
+    //     })
+    //     return updatedOrder
+    //   }
+    // }
+    // /**
+    //  * Reject Order By Admin
+    //  * @param orderId - Order ID to be rejected
+    //  * @return Updated order
+    //  */
+    // async rejectOrderByAdmin(orderId: number, remarks?: string): Promise<Order> {
+    //   // [Backend Fetching Needed] Get order details
+    //   const order = await this.getOrderById(orderId)
+    //   if (order.orderStatus !== OrderStatus.pending) {
+    //     throw new ApiError(400, 'শুধুমাত্র পেন্ডিং অর্ডার বাতিল করা যাবে')
+    //   }
+    //   if (order.transactionVerified) {
+    //     throw new ApiError(400, 'অর্ডার ইতোমধ্যে যাচাই করা হয়েছে')
+    //   }
+    //   if (order.cancelledByUser) {
+    //     // delete the order  along with the products
+    //     const deletedOrder = await prisma.order.delete({
+    //       where: { orderId },
+    //       include: { orderProducts: true },
+    //     })
+    //     return deletedOrder
+    //   }
+    //   // Update order status to rejected
+    //   else {
+    //     const updatedOrder = await prisma.order.update({
+    //       where: { orderId },
+    //       data: {
+    //         orderStatus: OrderStatus.rejected,
+    //         transactionId: null,
+    //         remarks: `${order.transactionId}=${remarks}`,
+    //       },
+    //     })
+    //     return updatedOrder
+    //   }
+    // }
+    // /**
+    //  * Cancel Order By Seller
+    //  * @param orderId - Order ID to be cancelled
+    //  * @return Updated order
+    //  * */
     cancelOrderBySeller(orderId, sellerId) {
         return __awaiter(this, void 0, void 0, function* () {
             // [Backend Fetching Needed] Get order details
             const order = yield this.getOrderById(orderId);
-            if (order.cancelledByUser) {
+            if (order.cancelledBySeller) {
                 throw new ApiError_1.default(400, 'অর্ডার ইতোমধ্যে বাতিল করা হয়েছে');
             }
             // check if the order is belongs to the seller
             if (order.sellerId !== sellerId) {
                 throw new ApiError_1.default(400, 'অর্ডারটি আপনার নয়');
             }
-            const cancellable = order.orderStatus === client_1.OrderStatus.pending || order.orderStatus === client_1.OrderStatus.approved;
+            const cancellable = order.orderStatus === client_1.OrderStatus.pending ||
+                order.orderStatus === client_1.OrderStatus.unverified;
             if (!cancellable) {
-                throw new ApiError_1.default(400, 'শুধুমাত্র অনুমোদিত অথবা পেন্ডিং অর্ডার বাতিল করা যাবে');
+                throw new ApiError_1.default(400, 'শুধুমাত্র পেন্ডিং অথবা অযাচাইকৃত অর্ডার বাতিল করা যাবে');
             }
             const updatedOrder = yield prisma_1.default.order.update({
                 where: { orderId },
                 data: {
-                    cancelledByUser: true,
+                    cancelledBySeller: true,
                 },
             });
             return updatedOrder;
@@ -356,50 +445,23 @@ class OrderServices {
         return __awaiter(this, void 0, void 0, function* () {
             // [Backend Fetching Needed] Get order details
             const order = yield this.getOrderById(orderId);
-            const cancellable = order.orderStatus === client_1.OrderStatus.processing || order.orderStatus === client_1.OrderStatus.approved;
+            const cancellable = order.orderStatus === client_1.OrderStatus.processing ||
+                order.orderStatus === client_1.OrderStatus.pending;
             if (!cancellable) {
-                throw new ApiError_1.default(400, 'শুধুমাত্র অনুমোদিত অথবা প্রক্রিয়াধীন অর্ডার বাতিল করা যাবে');
+                throw new ApiError_1.default(400, 'শুধুমাত্র প্রক্রিয়াধীন অথবা পেন্ডিং অর্ডার বাতিল করা যাবে');
             }
-            // Update order status to cancelled and refunds the delivery charge to the seller within transaction
-            const updatedOrder = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
-                const updatedOrder = yield tx.order.update({
-                    where: { orderId },
-                    data: {
-                        orderStatus: client_1.OrderStatus.refunded,
-                        remarks: remarks ? remarks : null,
-                    },
-                });
-                yield transaction_services_1.default.refundOrderCancellation({
-                    tx,
-                    userId: order.sellerId,
-                    amount: order.deliveryCharge.toNumber(),
-                });
-                return updatedOrder;
-            }));
-            return updatedOrder;
-        });
-    }
-    /**
-     * Process Order By Admin
-     * @param orderId - Order ID to be processed
-     * @return Updated order
-     * */
-    processOrderByAdmin(orderId) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // [Backend Fetching Needed] Get order details
-            const order = yield this.getOrderById(orderId);
-            if (order.orderStatus !== client_1.OrderStatus.approved) {
-                throw new ApiError_1.default(400, 'শুধুমাত্র অনুমোদিত অর্ডার প্রক্রিয়া করা যাবে');
-            }
-            // Update order status to processing
-            if (order.cancelledByUser) {
+            const refundable = order.isDeliveryChargePaidBySeller ||
+                (!order.sellerVerified &&
+                    !order.isDeliveryChargePaidBySeller &&
+                    order.sellerBalance.toNumber() >= order.deliveryCharge.toNumber());
+            if (refundable) {
                 // Here We need to update the order status to cancelled , verify the transaction and add the amount to the seller wallets within transaction
                 const updatedOrder = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
                     const updatedOrder = yield tx.order.update({
                         where: { orderId },
                         data: {
                             orderStatus: client_1.OrderStatus.refunded,
-                            transactionVerified: true,
+                            remarks: `${order.transactionId}=${remarks}`,
                         },
                     });
                     yield transaction_services_1.default.refundOrderCancellation({
@@ -415,7 +477,8 @@ class OrderServices {
                 const updatedOrder = yield prisma_1.default.order.update({
                     where: { orderId },
                     data: {
-                        orderStatus: client_1.OrderStatus.processing,
+                        orderStatus: client_1.OrderStatus.cancelled,
+                        remarks: `${order.transactionId}=${remarks}`,
                     },
                 });
                 return updatedOrder;
@@ -423,12 +486,40 @@ class OrderServices {
         });
     }
     /**
-     * Shipped Order By Admin
-     * @param orderId - Order ID to be shipped
-     * courierName - Courier name
-     * trackingURL - Tracking URL
-      * @return Updated order
-     */
+     * Process Order By Admin
+     * @param orderId - Order ID to be processed
+     * @return Updated order
+     * */
+    processOrderByAdmin(orderId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // [Backend Fetching Needed] Get order details
+            const order = yield this.getOrderById(orderId);
+            if (order.orderStatus !== client_1.OrderStatus.pending) {
+                throw new ApiError_1.default(400, 'শুধুমাত্র পেন্ডিং অর্ডার প্রক্রিয়া করা যাবে');
+            }
+            // Update order status to processing
+            if (order.cancelledBySeller) {
+                yield this.cancelOrderByAdmin(orderId, 'Order is cancelled by user');
+                return yield this.getOrderById(orderId);
+            }
+            else {
+                const updatedOrder = yield prisma_1.default.order.update({
+                    where: { orderId },
+                    data: {
+                        orderStatus: client_1.OrderStatus.processing,
+                    },
+                });
+                return updatedOrder;
+            }
+        });
+    }
+    // /**
+    //  * Shipped Order By Admin
+    //  * @param orderId - Order ID to be shipped
+    //  * courierName - Courier name
+    //  * trackingURL - Tracking URL
+    //  * @return Updated order
+    //  */
     shipOrderByAdmin(orderId, courierName, trackingURL) {
         return __awaiter(this, void 0, void 0, function* () {
             // [Backend Fetching Needed] Get order details
@@ -483,7 +574,9 @@ class OrderServices {
                     },
                 });
                 // verify the seller
-                const isVerified = completedOrdersCount >= config_1.default.minimumOrderCompletedToBeVerified ? true : false;
+                const isVerified = completedOrdersCount >= config_1.default.minimumOrderCompletedToBeVerified
+                    ? true
+                    : false;
                 yield tx.user.update({
                     where: { userId: order.sellerId },
                     data: { isVerified },
@@ -495,13 +588,39 @@ class OrderServices {
                     userName: order.sellerName,
                     userPhoneNo: order.sellerPhoneNo,
                 });
-                yield transaction_services_1.default.returnDeliveryChargeAfterOrderCompletion({
+                // await transactionServices.returnDeliveryChargeAfterOrderCompletion({
+                //   tx,
+                //   amount: order.deliveryCharge.toNumber(),
+                //   userName: order.sellerName,
+                //   userPhoneNo: order.sellerPhoneNo,
+                //   userId: order.sellerId,
+                // })
+                // find the seller referrer and add referral commission if exists
+                const seller = yield user_services_1.default.getUserDetailByUserId({
                     tx,
-                    amount: order.deliveryCharge.toNumber(),
-                    userName: order.sellerName,
-                    userPhoneNo: order.sellerPhoneNo,
                     userId: order.sellerId,
                 });
+                const referrer = seller.referredBy;
+                if (referrer) {
+                    const referralCommission = commission_utils_1.default.calculateReferralCommission(1, order.totalProductBasePrice.toNumber());
+                    yield transaction_services_1.default.addReferralCommission({
+                        tx,
+                        userId: referrer.userId,
+                        amount: referralCommission,
+                        userName: referrer.name,
+                        userPhoneNo: referrer.phoneNo,
+                        referralLevel: 1,
+                        reference: JSON.stringify({
+                            name: order.sellerName,
+                            phoneNo: order.sellerPhoneNo,
+                            orderId: order.orderId,
+                            orderAmount: order.totalProductBasePrice.toNumber(),
+                            orderCommission: referralCommission,
+                            orderDate: order.orderCreatedAt,
+                            referralLevel: 1,
+                        }),
+                    });
+                }
                 return updatedOrder;
             }));
             return updatedOrder;
@@ -509,9 +628,9 @@ class OrderServices {
     }
     /**
      * Return orders by Admin
-      * @param orderId - Order ID to be returned
-      * @return Updated order
-      * */
+     * @param orderId - Order ID to be returned
+     * @return Updated order
+     * */
     returnOrderByAdmin(orderId) {
         return __awaiter(this, void 0, void 0, function* () {
             // [Backend Fetching Needed] Get order details
@@ -520,10 +639,63 @@ class OrderServices {
                 throw new ApiError_1.default(400, 'শুধুমাত্র শিপ করা অর্ডার ফেরত দেওয়া যাবে');
             }
             // Update order status to returned and add the amount to the seller wallets within transaction
+            if (!order.isDeliveryChargePaidBySeller) {
+                // update the order status to returned and deduct the amount from the seller wallets within transaction
+                const updatedOrder = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                    const updatedOrder = yield tx.order.update({
+                        where: { orderId },
+                        data: {
+                            orderStatus: client_1.OrderStatus.returned,
+                        },
+                    });
+                    yield transaction_services_1.default.deductDeliveryChargeForOrder({
+                        tx,
+                        userId: order.sellerId,
+                        amount: order.deliveryCharge.toNumber(),
+                        remarks: 'অর্ডার ফেরত আসার কারণে ডেলিভারি চার্জ কাটা হয়েছে',
+                    });
+                    return updatedOrder;
+                }));
+                return updatedOrder;
+            }
             const updatedOrder = yield prisma_1.default.order.update({
                 where: { orderId },
                 data: {
                     orderStatus: client_1.OrderStatus.returned,
+                },
+            });
+            return updatedOrder;
+        });
+    }
+    faultyOrderByAdmin(orderId, remarks) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // [Backend Fetching Needed] Get order details
+            const order = yield this.getOrderById(orderId);
+            if (order.orderStatus !== client_1.OrderStatus.shipped) {
+                throw new ApiError_1.default(400, 'শুধুমাত্র শিপ করা অর্ডার ফল্টি করা যাবে');
+            }
+            // Update order status to returned and add the amount to the seller wallets within transaction
+            const updatedOrder = yield prisma_1.default.order.update({
+                where: { orderId },
+                data: {
+                    orderStatus: client_1.OrderStatus.faulty,
+                    remarks,
+                },
+            });
+            return updatedOrder;
+        });
+    }
+    reOrderFaulty(orderId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // [Backend Fetching Needed] Get order details
+            const order = yield this.getOrderById(orderId);
+            if (order.orderStatus !== client_1.OrderStatus.faulty) {
+                throw new ApiError_1.default(400, 'শুধুমাত্র ফল্টি অর্ডার পুনরায় অর্ডার করা যাবে');
+            }
+            const updatedOrder = yield prisma_1.default.order.update({
+                where: { orderId },
+                data: {
+                    orderStatus: client_1.OrderStatus.pending,
                 },
             });
             return updatedOrder;
@@ -535,22 +707,22 @@ class OrderServices {
      * @return List of orders
      */
     getOrdersByUserId(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ sellerId, status, page = 1, pageSize = 10 }) {
+        return __awaiter(this, arguments, void 0, function* ({ sellerId, status, page = 1, pageSize = 10, }) {
             const orders = yield prisma_1.default.order.findMany({
                 where: Object.assign({ sellerId }, (status && {
-                    orderStatus: Array.isArray(status) ? { in: status } : status
+                    orderStatus: Array.isArray(status) ? { in: status } : status,
                 })),
                 include: { orderProducts: true },
                 skip: (page - 1) * pageSize,
                 take: pageSize,
                 orderBy: {
-                    orderCreatedAt: 'desc'
-                }
+                    orderCreatedAt: 'desc',
+                },
             });
             const totalOrders = yield prisma_1.default.order.count({
                 where: Object.assign({ sellerId }, (status && {
-                    orderStatus: Array.isArray(status) ? { in: status } : status
-                }))
+                    orderStatus: Array.isArray(status) ? { in: status } : status,
+                })),
             });
             const totalPages = Math.ceil(totalOrders / pageSize);
             return {
@@ -558,28 +730,27 @@ class OrderServices {
                 totalOrders,
                 totalPages,
                 currentPage: page,
-                pageSize
+                pageSize,
             };
-            return orders;
         });
     }
     getOrdersForAdmin(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ status, page = 1, pageSize = 10 }) {
+        return __awaiter(this, arguments, void 0, function* ({ status, page = 1, pageSize = 10, }) {
             const orders = yield prisma_1.default.order.findMany({
                 where: Object.assign({}, (status && {
-                    orderStatus: Array.isArray(status) ? { in: status } : status
+                    orderStatus: Array.isArray(status) ? { in: status } : status,
                 })),
                 include: { orderProducts: true },
                 skip: (page - 1) * pageSize,
                 take: pageSize,
                 orderBy: {
-                    orderCreatedAt: 'desc'
-                }
+                    orderCreatedAt: 'desc',
+                },
             });
             const totalOrders = yield prisma_1.default.order.count({
                 where: Object.assign({}, (status && {
-                    orderStatus: Array.isArray(status) ? { in: status } : status
-                }))
+                    orderStatus: Array.isArray(status) ? { in: status } : status,
+                })),
             });
             const totalPages = Math.ceil(totalOrders / pageSize);
             return {
@@ -587,9 +758,8 @@ class OrderServices {
                 totalOrders,
                 totalPages,
                 currentPage: page,
-                pageSize
+                pageSize,
             };
-            return orders;
         });
     }
 }

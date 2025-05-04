@@ -311,6 +311,7 @@ enum OrderStatus {
   rejected
   refunded
   completed
+  faulty
 }
 
 enum WithdrawStatus {

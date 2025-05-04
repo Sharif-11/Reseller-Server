@@ -120,16 +120,16 @@ class PaymentService {
     verifyDuePaymentRequest(_a) {
         return __awaiter(this, arguments, void 0, function* ({ paymentId, amount, transactionId, }) {
             const existingPayment = yield prisma_1.default.payment.findUnique({
-                where: { paymentId },
+                where: { paymentId, paymentType: 'DuePayment' },
             });
             if (!existingPayment) {
-                throw new ApiError_1.default(axios_1.HttpStatusCode.NotFound, 'Payment request not found');
+                throw new ApiError_1.default(axios_1.HttpStatusCode.NotFound, 'পেমেন্ট অনুরোধ পাওয়া যায়নি');
             }
             if (existingPayment.paymentStatus !== 'pending') {
-                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Only pending payment requests can be verified');
+                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'শুধুমাত্র অমীমাংসিত পেমেন্ট অনুরোধগুলি যাচাই করা যেতে পারে');
             }
             if (transactionId !== existingPayment.transactionId) {
-                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Transaction ID does not match the existing payment request');
+                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'ট্রানজেকশন আইডি  মিলছে না');
             }
             // here we need to verify the payment along with adding the balance to the seller wallet within a transaction
             const payment = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
@@ -155,6 +155,45 @@ class PaymentService {
             return payment.updatedPayment;
         });
     }
+    verifyOrderPaymentRequest(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ paymentId, transactionId, amount, }) {
+            const existingPayment = yield prisma_1.default.payment.findUnique({
+                where: { paymentId, paymentType: 'OrderPayment' },
+            });
+            if (!existingPayment) {
+                throw new ApiError_1.default(axios_1.HttpStatusCode.NotFound, 'পেমেন্ট অনুরোধ পাওয়া যায়নি');
+            }
+            if (existingPayment.paymentStatus !== 'pending') {
+                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'শুধুমাত্র অমীমাংসিত পেমেন্ট অনুরোধগুলি যাচাই করা যেতে পারে');
+            }
+            if (transactionId !== existingPayment.transactionId) {
+                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'ট্রানজেকশন আইডি  মিলছে না');
+            }
+            // we need to make the payment verified and also update the transactionVerified field of the order
+            const payment = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                const updatedPayment = yield tx.payment.update({
+                    where: { paymentId },
+                    data: {
+                        paymentStatus: 'verified',
+                        transactionId,
+                        actualAmount: amount,
+                        processedAt: new Date(),
+                    },
+                });
+                const updatedOrder = yield tx.order.update({
+                    where: { orderId: updatedPayment.orderId },
+                    data: {
+                        transactionVerified: true,
+                        orderStatus: 'pending',
+                    },
+                });
+                if (updatedOrder.deliveryCharge.toNumber() > amount) {
+                    throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Amount is less than delivery charge');
+                }
+                return { updatedPayment, updatedOrder };
+            }));
+        });
+    }
     rejectPaymentRequest(_a) {
         return __awaiter(this, arguments, void 0, function* ({ tx, paymentId, remarks, }) {
             const existingPayment = yield (tx || prisma_1.default).payment.findUnique({
@@ -174,6 +213,38 @@ class PaymentService {
                     remarks,
                 },
             });
+        });
+    }
+    rejectOrderPaymentRequest(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ paymentId, remarks, }) {
+            const existingPayment = yield prisma_1.default.payment.findUnique({
+                where: { paymentId, paymentType: 'OrderPayment' },
+            });
+            if (!existingPayment) {
+                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Payment request not found');
+            }
+            if (existingPayment.paymentStatus !== 'pending') {
+                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Only pending payment requests can be rejected');
+            }
+            // we need to make the payment rejected and also update the orderStatus to rejected and make transaction id null
+            const payment = yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                const updatedPayment = yield tx.payment.update({
+                    where: { paymentId },
+                    data: {
+                        paymentStatus: 'rejected',
+                        transactionId: null,
+                        remarks,
+                    },
+                });
+                const updatedOrder = yield tx.order.update({
+                    where: { orderId: existingPayment.orderId },
+                    data: {
+                        orderStatus: 'rejected',
+                        transactionVerified: false,
+                    },
+                });
+                return { updatedPayment, updatedOrder };
+            }));
         });
     }
     getAllPaymentsOfASeller(_a) {

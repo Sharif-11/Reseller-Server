@@ -30,9 +30,9 @@ class UserServices {
   async getUserByPhoneNo(phoneNo: string): Promise<User> {
     const user = await prisma.user.findUnique({
       where: { phoneNo },
-      include:{
-        wallets:true
-      }
+      include: {
+        wallets: true,
+      },
     })
 
     if (!user) {
@@ -52,6 +52,28 @@ class UserServices {
       where: { userId },
       include: {
         wallets: true,
+      },
+    })
+
+    if (!user) {
+      throw new ApiError(404, 'ব্যবহারকারী পাওয়া যায়নি')
+    }
+
+    return user
+  }
+  async getUserDetailByUserId({
+    tx,
+    userId,
+  }: {
+    tx: Prisma.TransactionClient
+    userId: string
+  }) {
+    const user = await tx.user.findUnique({
+      where: { userId },
+      include: {
+        wallets: true,
+        referredBy: true,
+        referrals: true,
       },
     })
 
@@ -411,7 +433,7 @@ class UserServices {
 
     return { unLocked: true }
   }
-  async getAdminForTheUsers(){
+  async getAdminForTheUsers() {
     const admins = await prisma.user.findFirst({
       where: {
         role: 'Admin',

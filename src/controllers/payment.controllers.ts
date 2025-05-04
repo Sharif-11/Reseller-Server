@@ -77,6 +77,28 @@ class PaymentController {
       next(error)
     }
   }
+  async rejectOrderPaymentRequest(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { paymentId } = req.params
+      const { remarks } = req.body
+      const payment = await paymentServices.rejectOrderPaymentRequest({
+        paymentId: Number(paymentId),
+        remarks,
+      })
+      res.status(HttpStatusCode.Accepted).json({
+        statusCode: HttpStatusCode.Accepted,
+        success: true,
+        message: 'Payment request rejected successfully',
+        data: payment,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
 
   async getAllPaymentsOfASeller(
     req: Request,

@@ -15,6 +15,10 @@ adminPaymentRoutes.patch(
   paymentControllers.verifyOrderPaymentRequest
 )
 adminPaymentRoutes.patch(
+  '/:paymentId/reject-order',
+  paymentControllers.rejectOrderPaymentRequest
+)
+adminPaymentRoutes.patch(
   '/:paymentId/reject',
   paymentControllers.rejectPaymentRequest
 )

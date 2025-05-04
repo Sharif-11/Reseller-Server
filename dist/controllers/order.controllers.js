@@ -36,36 +36,33 @@ class OrderController {
             }
         });
     }
-    /**
-     * Approve an order by Admin
-     */
-    approveOrder(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const orderId = +req.params.orderId;
-                const transactionId = req.body.transactionId;
-                const order = yield order_services_1.default.approveOrderByAdmin({
-                    orderId, transactionId
-                });
-                let message = 'অর্ডার সফলভাবে অনুমোদিত হয়েছে';
-                if (order.orderStatus === 'refunded') {
-                    message = 'বিক্রেতা ইতিমধ্যে এই অর্ডার বাতিল করেছেন বলে টাকা ফেরত দেওয়া হয়েছে';
-                }
-                if (order.orderStatus === 'cancelled') {
-                    message = 'বিক্রেতা ইতিমধ্যে এই অর্ডার বাতিল করেছেন';
-                }
-                res.status(200).json({
-                    statusCode: 200,
-                    message,
-                    success: true,
-                    data: order,
-                });
-            }
-            catch (error) {
-                next(error);
-            }
-        });
-    }
+    //   /**
+    //    * Approve an order by Admin
+    //    */
+    //   async approveOrder(req: Request, res: Response, next: NextFunction) {
+    //     try {
+    //       const orderId = +req.params.orderId
+    //       const transactionId = req.body.transactionId
+    //       const order = await OrderServices.approveOrderByAdmin({
+    //         orderId,transactionId
+    //       })
+    //       let message='অর্ডার সফলভাবে অনুমোদিত হয়েছে';
+    //       if(order.orderStatus==='refunded'){
+    //          message='বিক্রেতা ইতিমধ্যে এই অর্ডার বাতিল করেছেন বলে টাকা ফেরত দেওয়া হয়েছে'
+    //       }
+    //       if(order.orderStatus==='cancelled'){
+    //          message='বিক্রেতা ইতিমধ্যে এই অর্ডার বাতিল করেছেন'
+    //       }
+    //       res.status(200).json({
+    //         statusCode: 200,
+    //         message,
+    //         success: true,
+    //         data: order,
+    //       })
+    //     } catch (error) {
+    //       next(error)
+    //     }
+    // }
     /**
      * Cancel an order by Admin
      */
@@ -112,24 +109,21 @@ class OrderController {
     /**
      * Reject an order by Admin
      */
-    rejectOrder(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const orderId = +req.params.orderId;
-                const remarks = req.body.remarks;
-                const order = yield order_services_1.default.rejectOrderByAdmin(orderId, remarks);
-                res.status(200).json({
-                    statusCode: 200,
-                    message: 'অর্ডার সফলভাবে বাতিল হয়েছে',
-                    success: true,
-                    data: order,
-                });
-            }
-            catch (error) {
-                next(error);
-            }
-        });
-    }
+    // async rejectOrder(req: Request, res: Response, next: NextFunction) {
+    //   try {
+    //     const orderId = +req.params.orderId
+    //     const remarks = req.body.remarks
+    //     const order = await OrderServices.rejectOrderByAdmin(orderId, remarks)
+    //     res.status(200).json({
+    //       statusCode: 200,
+    //       message: 'অর্ডার সফলভাবে বাতিল হয়েছে',
+    //       success: true,
+    //       data: order,
+    //     })
+    //   } catch (error) {
+    //     next(error)
+    //   }
+    // }
     processOrder(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -137,7 +131,9 @@ class OrderController {
                 const order = yield order_services_1.default.processOrderByAdmin(orderId);
                 res.status(200).json({
                     statusCode: 200,
-                    message: order.orderStatus === 'processing' ? 'অর্ডার সফলভাবে প্রক্রিয়া করা হয়েছে' : 'বিক্রেতা ইতিমধ্যে এই অর্ডার বাতিল করেছেন বলে টাকা ফেরত দেওয়া হয়েছে',
+                    message: order.orderStatus === 'processing'
+                        ? 'অর্ডার সফলভাবে প্রক্রিয়া করা হয়েছে'
+                        : 'বিক্রেতা ইতিমধ্যে এই অর্ডার বাতিল করেছেন বলে টাকা ফেরত দেওয়া হয়েছে',
                     success: true,
                     data: order,
                 });
@@ -192,6 +188,40 @@ class OrderController {
                 res.status(200).json({
                     statusCode: 200,
                     message: 'অর্ডার সফলভাবে ফেরত দেওয়া হয়েছে',
+                    success: true,
+                    data: order,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    faultyOrderByAdmin(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const orderId = +req.params.orderId;
+                const order = yield order_services_1.default.faultyOrderByAdmin(orderId);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'বিক্রেতাকে পুনরায় অর্ডার করার জন্য অনুরোধ করা হয়েছে',
+                    success: true,
+                    data: order,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    reOrderFaulty(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const orderId = +req.params.orderId;
+                const order = yield order_services_1.default.reOrderFaulty(orderId);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'আপনি সফলভাবে পুনরায় অর্ডার করেছেন',
                     success: true,
                     data: order,
                 });

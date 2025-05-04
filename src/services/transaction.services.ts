@@ -1,8 +1,8 @@
 import { Prisma } from '@prisma/client'
 import Decimal from 'decimal.js'
 import ApiError from '../utils/ApiError'
-import SmsServices from './sms.services'
 import prisma from '../utils/prisma'
+import SmsServices from './sms.services'
 
 class TransactionService {
   /**
@@ -37,7 +37,7 @@ class TransactionService {
     phoneNo: string
     name: string
     balance: Decimal
-    version: number;
+    version: number
     isLocked: boolean
   }> {
     // এক্সপ্লিসিট রো লকিং
@@ -45,7 +45,13 @@ class TransactionService {
 
     const user = await tx.user.findUnique({
       where: { userId },
-      select: { balance: true, version: true, phoneNo: true, name: true,isLocked:true },
+      select: {
+        balance: true,
+        version: true,
+        phoneNo: true,
+        name: true,
+        isLocked: true,
+      },
     })
 
     if (!user) {
@@ -75,9 +81,9 @@ class TransactionService {
     isLocked: boolean = false
   ): Promise<void> {
     const updatedUser = await tx.user.updateMany({
-      where: { 
+      where: {
         userId,
-        version: currentVersion 
+        version: currentVersion,
       },
       data: {
         balance: newBalance.toFixed(2),
@@ -87,7 +93,10 @@ class TransactionService {
     })
 
     if (updatedUser.count === 0) {
-      throw new ApiError(409, 'ব্যবহারকারী আপডেট ব্যর্থ হয়েছে, অনুগ্রহ করে আবার চেষ্টা করুন')
+      throw new ApiError(
+        409,
+        'ব্যবহারকারী আপডেট ব্যর্থ হয়েছে, অনুগ্রহ করে আবার চেষ্টা করুন'
+      )
     }
   }
 
@@ -157,11 +166,11 @@ class TransactionService {
       }),
       prisma.transaction.count({ where: { userId } }),
     ])
-     const totalCredit= await prisma.transaction.aggregate({
+    const totalCredit = await prisma.transaction.aggregate({
       where: { userId, type: 'Credit' },
       _sum: { amount: true },
     })
-    const totalDebit= await prisma.transaction.aggregate({
+    const totalDebit = await prisma.transaction.aggregate({
       where: { userId, type: 'Debit' },
       _sum: { amount: true },
     })
@@ -174,7 +183,9 @@ class TransactionService {
       totalPages: Math.ceil(total / pageSize),
       totalCredit: totalCredit._sum.amount || 0,
       totalDebit: totalDebit._sum.amount || 0,
-      calculatedBalance: Number(totalCredit?._sum.amount || 0) - Number(totalDebit._sum.amount || 0),  
+      calculatedBalance:
+        Number(totalCredit?._sum.amount || 0) -
+        Number(totalDebit._sum.amount || 0),
     }
   }
 
@@ -277,7 +288,9 @@ class TransactionService {
 
     await SmsServices.sendMessage(
       user.phoneNo,
-      `আপনার অ্যাকাউন্টে ${decimalAmount.toFixed(2)} টাকা যোগ করা হয়েছে। টিএক্সআইডি: ${transaction.transactionId}`
+      `আপনার অ্যাকাউন্টে ${decimalAmount.toFixed(
+        2
+      )} টাকা যোগ করা হয়েছে। টিএক্সআইডি: ${transaction.transactionId}`
     )
 
     return transaction
@@ -351,15 +364,16 @@ class TransactionService {
    * @returns তৈরি করা ট্রানজেকশন
    * @throws ApiError যদি পরিমাণ নেগেটিভ হয় বা ব্যালেন্স কম থাকে
    */
-  async deductDeliveryChargeForOrderApproval({
+  async deductDeliveryChargeForOrder({
     tx,
     amount,
     userId,
-  
+    remarks,
   }: {
     tx: Prisma.TransactionClient
     amount: number
     userId: string
+    remarks?: string
   }) {
     const decimalAmount = new Decimal(amount)
     if (decimalAmount.isNegative()) {
@@ -377,7 +391,7 @@ class TransactionService {
       userName: user.name,
       type: 'Debit',
       reason: 'ডেলিভারি চার্জ কর্তন',
-      remarks: 'অর্ডার অনুমোদনের জন্য ডেলিভারি চার্জ কাটা হয়েছে',
+      remarks,
     })
 
     return { transaction }
@@ -449,15 +463,15 @@ class TransactionService {
     amount,
     userId,
     userPhoneNo,
-    userName}
-  : {
+    userName,
+  }: {
     tx: Prisma.TransactionClient
     amount: number
     userId: string
     userPhoneNo: string
     userName: string
-    }) {
-    const decimalAmount = new Decimal(amount);
+  }) {
+    const decimalAmount = new Decimal(amount)
 
     if (decimalAmount.isNegative()) {
       throw new ApiError(400, 'পরিমাণ নেগেটিভ হতে পারবে না')
@@ -482,7 +496,52 @@ class TransactionService {
       reason: 'সেলস কমিশন ',
     })
     return transaction
- 
+  }
+
+  async addReferralCommission({
+    tx,
+    amount,
+    userId,
+    userPhoneNo,
+    userName,
+    referralLevel,
+    reference,
+  }: {
+    tx: Prisma.TransactionClient
+    amount: number
+    userId: string
+    userPhoneNo: string
+    userName: string
+    referralLevel: number
+    reference?: string
+  }) {
+    const decimalAmount = new Decimal(amount)
+
+    if (decimalAmount.isNegative()) {
+      throw new ApiError(400, 'পরিমাণ নেগেটিভ হতে পারবে না')
+    }
+
+    const user = await this.getUserWithLock(tx, userId)
+    const newBalance = user.balance.plus(decimalAmount)
+    await this.updateUserBalance(
+      tx,
+      userId,
+      user.version,
+      newBalance,
+      newBalance.isNegative() ? user.isLocked : false
+    )
+
+    const transaction = await this.createTransactionRecord(tx, {
+      amount: decimalAmount,
+      userId,
+      userPhoneNo: userPhoneNo,
+      userName: userName,
+      type: 'Credit',
+      reason: 'রেফারেল কমিশন',
+      referralLevel,
+      reference,
+    })
+    return transaction
   }
 
   /**
@@ -494,20 +553,20 @@ class TransactionService {
    * @param userName - ইউজার নাম
    * @returns তৈরি করা ট্রানজেকশন
    * @throws ApiError যদি পরিমাণ নেগেটিভ হয় বা ট্রানজেকশন আইডি ইতিমধ্যে থাকে
-    */
+   */
   async returnDeliveryChargeAfterOrderCompletion({
     tx,
     amount,
     userId,
     userPhoneNo,
     userName,
-  }:{
+  }: {
     tx: Prisma.TransactionClient
     amount: number
     userId: string
     userPhoneNo: string
     userName: string
-  }){
+  }) {
     const decimalAmount = new Decimal(amount)
 
     if (decimalAmount.isNegative()) {
@@ -533,7 +592,6 @@ class TransactionService {
       reason: 'ডেলিভারি চার্জ ফেরত',
     })
     return transaction
-
   }
   async withdrawBalance({
     tx,
@@ -624,7 +682,6 @@ class TransactionService {
       )
     }
   }
-  
 }
 
 export default new TransactionService()
