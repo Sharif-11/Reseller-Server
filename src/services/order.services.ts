@@ -736,11 +736,6 @@ class OrderServices {
           referralLevel: 1,
           reference: JSON.stringify({
             name: order.sellerName,
-            phoneNo: order.sellerPhoneNo,
-            orderId: order.orderId,
-            orderAmount: order.totalProductBasePrice.toNumber(),
-            orderCommission: referralCommission,
-            orderDate: order.orderCreatedAt,
             referralLevel: 1,
           }),
         })
