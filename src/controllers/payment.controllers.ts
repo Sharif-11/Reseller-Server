@@ -55,6 +55,29 @@ class PaymentController {
       next(error)
     }
   }
+  async verifyOrderPaymentRequest(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { paymentId } = req.params
+      const payment = await paymentServices.verifyOrderPaymentRequest({
+        paymentId: Number(paymentId),
+        amount: req.body.amount,
+        transactionId: req.body.transactionId,
+      })
+      res.status(HttpStatusCode.Accepted).json({
+        statusCode: HttpStatusCode.Accepted,
+        success: true,
+        message: 'Payment request verified successfully',
+        data: payment,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
   async getAllPaymentsOfASeller(
     req: Request,
     res: Response,

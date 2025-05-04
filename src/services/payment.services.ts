@@ -183,7 +183,7 @@ class PaymentService {
     amount: number
   }) {
     const existingPayment = await prisma.payment.findUnique({
-      where: { paymentId },
+      where: { paymentId, paymentType: 'DuePayment' },
     })
     if (!existingPayment) {
       throw new ApiError(
@@ -223,6 +223,63 @@ class PaymentService {
     })
     return payment.updatedPayment
   }
+  async verifyOrderPaymentRequest({
+    paymentId,
+    transactionId,
+    amount,
+  }: {
+    paymentId: number
+    transactionId: string
+    amount: number
+  }) {
+    const existingPayment = await prisma.payment.findUnique({
+      where: { paymentId, paymentType: 'OrderPayment' },
+    })
+    if (!existingPayment) {
+      throw new ApiError(
+        HttpStatusCode.NotFound,
+        'পেমেন্ট অনুরোধ পাওয়া যায়নি'
+      )
+    }
+    if (existingPayment.paymentStatus !== 'pending') {
+      throw new ApiError(
+        HttpStatusCode.BadRequest,
+        'শুধুমাত্র অমীমাংসিত পেমেন্ট অনুরোধগুলি যাচাই করা যেতে পারে'
+      )
+    }
+    if (transactionId !== existingPayment.transactionId) {
+      throw new ApiError(HttpStatusCode.BadRequest, 'ট্রানজেকশন আইডি  মিলছে না')
+    }
+    // we need to make the payment verified and also update the transactionVerified field of the order
+    const payment = await prisma.$transaction(async tx => {
+      const updatedPayment = await tx.payment.update({
+        where: { paymentId },
+        data: {
+          paymentStatus: 'verified',
+          transactionId,
+          actualAmount: amount,
+          processedAt: new Date(),
+        },
+      })
+
+      const updatedOrder = await tx.order.update({
+        where: { orderId: updatedPayment.orderId! },
+        data: {
+          transactionVerified: true,
+          orderStatus: 'pending',
+        },
+      })
+      if (updatedOrder.deliveryCharge.toNumber() > amount) {
+        throw new ApiError(
+          HttpStatusCode.BadRequest,
+          'Amount is less than delivery charge'
+        )
+      }
+
+      return { updatedPayment, updatedOrder }
+    })
+  }
+
   async rejectPaymentRequest({
     tx,
     paymentId,

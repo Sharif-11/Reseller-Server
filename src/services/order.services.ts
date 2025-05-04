@@ -71,6 +71,47 @@ class OrderServices {
         this.calculateExtraDeliveryCharge(totalProductQuantity),
     }
   }
+  async verifyOrderProducts(
+    products: {
+      productId: number
+      productQuantity: number
+      productImage: string
+      productSellingPrice: number
+    }[]
+  ) {
+    const productPremises = products.map(async product => {
+      const {
+        productId,
+        name: productName,
+        basePrice: productBasePrice,
+        images,
+        published,
+      } = await productServices.getProduct(product.productId)
+      const isValidImage = images.some(
+        image => image.imageUrl === product.productImage
+      )
+      if (!published) {
+        throw new ApiError(400, 'Hidden product cannot be ordered')
+      }
+      if (!isValidImage) {
+        throw new ApiError(400, 'Invalid product image')
+      }
+      return {
+        ...product,
+        productName,
+        productBasePrice,
+        productTotalBasePrice: productBasePrice.times(product.productQuantity),
+        productTotalSellingPrice:
+          product.productSellingPrice * product.productQuantity,
+      }
+    })
+    try {
+      await Promise.all(productPremises)
+      return true
+    } catch (error) {
+      return false
+    }
+  }
   /**
    * Create order from frontend data (dummy implementation)
    * @param frontendData - Minimal order data from frontend
@@ -186,90 +227,103 @@ class OrderServices {
       adminWallet
 
     // we need to create the order within transaction, here we need to create a payment record also for the order
-    const order = await prisma.$transaction(async tx => {
-      // Create order
-      const createdOrder = await tx.order.create({
-        data: {
-          customerName: frontendData.customerName,
-          customerPhoneNo: frontendData.customerPhoneNo,
-          customerZilla: frontendData.customerZilla,
-          customerUpazilla: frontendData.customerUpazilla,
-          deliveryAddress: frontendData.deliveryAddress,
-          comments: frontendData.comments,
-          totalProductQuantity,
-          totalProductBasePrice,
-          totalProductSellingPrice,
-          totalCommission,
-          totalAmount,
-          actualCommission,
-          sellerId,
-          sellerName,
-          sellerPhoneNo,
-          sellerShopName,
-          sellerVerified,
-          sellerBalance,
-          isDeliveryChargePaidBySeller:
-            frontendData.isDeliveryChargePaidBySeller,
-          deliveryChargePaidBySeller:
-            frontendData.deliveryChargePaidBySeller || null,
-          transactionId: frontendData.transactionId || null,
-          adminWalletName: adminWalletName || null,
-          adminWalletPhoneNo: adminWalletPhoneNo || null,
-          sellerWalletName: frontendData.sellerWalletName || null,
-          sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo || null,
-          deliveryCharge: totalDeliveryCharge,
-          cashOnAmount: frontendData.isDeliveryChargePaidBySeller
-            ? totalAmount
-            : totalAmount + totalDeliveryCharge,
-          orderProducts: {
-            create: enrichedProducts.map(product => ({
-              productId: product.productId,
-              productName: product.productName,
-              productBasePrice: product.productBasePrice,
-              productImage: product.productImage,
-              productSellingPrice: product.productSellingPrice,
-              selectedOptions: product.selectedOptions,
-              productQuantity: product.productQuantity,
-              productTotalBasePrice: product.productTotalBasePrice,
-              productTotalSellingPrice: product.productTotalSellingPrice,
-            })),
+    try {
+      const order = await prisma.$transaction(async tx => {
+        // Create order
+        const createdOrder = await tx.order.create({
+          data: {
+            customerName: frontendData.customerName,
+            customerPhoneNo: frontendData.customerPhoneNo,
+            customerZilla: frontendData.customerZilla,
+            customerUpazilla: frontendData.customerUpazilla,
+            deliveryAddress: frontendData.deliveryAddress,
+            comments: frontendData.comments,
+            totalProductQuantity,
+            totalProductBasePrice,
+            totalProductSellingPrice,
+            totalCommission,
+            totalAmount,
+            actualCommission,
+            sellerId,
+            sellerName,
+            sellerPhoneNo,
+            sellerShopName,
+            sellerVerified,
+            sellerBalance,
+            orderStatus: frontendData.isDeliveryChargePaidBySeller
+              ? 'unverified'
+              : 'pending',
+            adminWalletId: frontendData.adminWalletId!,
+            isDeliveryChargePaidBySeller:
+              frontendData.isDeliveryChargePaidBySeller,
+            deliveryChargePaidBySeller:
+              frontendData.deliveryChargePaidBySeller || null,
+            transactionId: frontendData.transactionId || null,
+            adminWalletName: adminWalletName || null,
+            adminWalletPhoneNo: adminWalletPhoneNo || null,
+            sellerWalletName: frontendData.sellerWalletName || null,
+            sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo || null,
+            deliveryCharge: totalDeliveryCharge,
+            cashOnAmount: frontendData.isDeliveryChargePaidBySeller
+              ? totalAmount
+              : totalAmount + totalDeliveryCharge,
+            orderProducts: {
+              create: enrichedProducts.map(product => ({
+                productId: product.productId,
+                productName: product.productName,
+                productBasePrice: product.productBasePrice,
+                productImage: product.productImage,
+                productSellingPrice: product.productSellingPrice,
+                selectedOptions: product.selectedOptions,
+                productQuantity: product.productQuantity,
+                productTotalBasePrice: product.productTotalBasePrice,
+                productTotalSellingPrice: product.productTotalSellingPrice,
+              })),
+            },
           },
-        },
+        })
+        // Create order products
+
+        if (frontendData.isDeliveryChargePaidBySeller) {
+          try {
+            await paymentServices.createOrderPaymentRequest({
+              tx,
+              amount: frontendData.deliveryChargePaidBySeller!,
+              transactionId: frontendData.transactionId!,
+              sellerWalletName: frontendData.sellerWalletName!,
+              sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo!,
+              adminWalletId: frontendData.adminWalletId!,
+              adminWalletName: adminWalletName,
+              adminWalletPhoneNo: adminWalletPhoneNo,
+              sellerId,
+              sellerName,
+              sellerPhoneNo,
+              orderId: createdOrder.orderId,
+            })
+          } catch (error) {
+            console.log('Error creating order payment request:', error)
+            throw error
+          }
+        }
+        if (
+          !sellerVerified &&
+          !frontendData.isDeliveryChargePaidBySeller &&
+          sellerBalance.toNumber() >= totalDeliveryCharge
+        ) {
+          // we need to create a transaction record for the delivery charge deduction
+          await transactionServices.deductDeliveryChargeForOrderApproval({
+            tx,
+            userId: sellerId,
+            amount: totalDeliveryCharge,
+          })
+        }
+        return createdOrder
       })
-      // Create order products
 
-      if (frontendData.isDeliveryChargePaidBySeller) {
-        await paymentServices.createOrderPaymentRequest({
-          tx,
-          amount: frontendData.deliveryChargePaidBySeller!,
-          transactionId: frontendData.transactionId!,
-          sellerWalletName: frontendData.sellerWalletName!,
-          sellerWalletPhoneNo: frontendData.sellerWalletPhoneNo!,
-          adminWalletId: frontendData.adminWalletId!,
-          adminWalletName: adminWalletName,
-          adminWalletPhoneNo: adminWalletPhoneNo,
-          sellerId,
-          sellerName,
-          sellerPhoneNo,
-          orderId: createdOrder.orderId,
-        })
-      }
-      if (
-        !sellerVerified &&
-        !frontendData.isDeliveryChargePaidBySeller &&
-        sellerBalance.toNumber() >= totalDeliveryCharge
-      ) {
-        // we need to create a transaction record for the delivery charge deduction
-        await transactionServices.deductDeliveryChargeForOrderApproval({
-          tx,
-          userId: sellerId,
-          amount: totalDeliveryCharge,
-        })
-      }
-      return createdOrder
-    })
-
-    return order
+      return order
+    } catch (error) {
+      throw error
+    }
   }
 
   /**
@@ -277,18 +331,18 @@ class OrderServices {
    * @param orderId - Order ID to be fetched
    * @return Order details
    */
-  // async getOrderById(orderId: number): Promise<Order> {
-  //   const order = await prisma.order.findUnique({
-  //     where: { orderId },
-  //     include: { orderProducts: true },
-  //   })
+  async getOrderById(orderId: number): Promise<Order> {
+    const order = await prisma.order.findUnique({
+      where: { orderId },
+      include: { orderProducts: true },
+    })
 
-  //   if (!order) {
-  //     throw new ApiError(404, 'Order not found')
-  //   }
+    if (!order) {
+      throw new ApiError(404, 'Order not found')
+    }
 
-  //   return order
-  // }
+    return order
+  }
 
   // /**
   //  * Approve Order By Admin
