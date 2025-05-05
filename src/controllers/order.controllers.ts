@@ -1,12 +1,28 @@
 import { OrderStatus } from '@prisma/client'
 import { NextFunction, Request, Response } from 'express'
-import OrderServices from '../services/order.services'
+import {
+  default as OrderServices,
+  default as orderServices,
+} from '../services/order.services'
 import CourierTracker from '../services/tracking.services'
 
 class OrderController {
   /**
    * Create a new order
    */
+  async verifyOrderProducts(req: Request, res: Response, next: NextFunction) {
+    try {
+      const verifiedProducts = await orderServices.verifyOrderProducts(req.body)
+      res.status(200).json({
+        statusCode: 200,
+        message: 'Products verified successfully',
+        success: true,
+        data: verifiedProducts,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
   async createOrder(req: Request, res: Response, next: NextFunction) {
     try {
       const sellerId = req.user?.userId

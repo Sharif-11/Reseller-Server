@@ -18,6 +18,22 @@ class OrderController {
     /**
      * Create a new order
      */
+    verifyOrderProducts(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const verifiedProducts = yield order_services_1.default.verifyOrderProducts(req.body);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'Products verified successfully',
+                    success: true,
+                    data: verifiedProducts,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
     createOrder(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;

@@ -9,6 +9,7 @@ sellerOrderRoutes.post(
   // validateRequest,
   orderControllers.createOrder
 )
+sellerOrderRoutes.post('/verify-products', orderControllers.verifyOrderProducts)
 sellerOrderRoutes.patch(
   '/:orderId/cancel-order',
   orderControllers.cancelOrderBySeller

@@ -165,6 +165,7 @@ class OrderServices {
       const isValidImage = images.some(
         image => image.imageUrl === product.productImage
       )
+
       if (!published) {
         throw new ApiError(400, 'Hidden product cannot be ordered')
       }

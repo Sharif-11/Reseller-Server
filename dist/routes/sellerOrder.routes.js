@@ -11,6 +11,7 @@ sellerOrderRoutes.post('/',
 // validateCreateOrder,
 // validateRequest,
 order_controllers_1.default.createOrder);
+sellerOrderRoutes.post('/verify-products', order_controllers_1.default.verifyOrderProducts);
 sellerOrderRoutes.patch('/:orderId/cancel-order', order_controllers_1.default.cancelOrderBySeller);
 sellerOrderRoutes.patch('/:orderId/re-order', order_controllers_1.default.reOrderFaulty);
 exports.default = sellerOrderRoutes;
