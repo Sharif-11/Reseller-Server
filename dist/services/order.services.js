@@ -126,6 +126,14 @@ class OrderServices {
                 if (frontendData.deliveryChargePaidBySeller < totalDeliveryCharge) {
                     throw new ApiError_1.default(400, 'Insufficient delivery charge paid by seller');
                 }
+                const existingTransaction = yield prisma_1.default.payment.findUnique({
+                    where: {
+                        transactionId: frontendData.transactionId,
+                    },
+                });
+                if (existingTransaction) {
+                    throw new ApiError_1.default(400, 'এই ট্রানজেকশন আইডি ইতিমধ্যে ব্যবহৃত হয়েছে');
+                }
             }
             // get admin wallet info
             let adminWalletName = null;

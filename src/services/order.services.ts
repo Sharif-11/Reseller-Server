@@ -219,6 +219,14 @@ class OrderServices {
       if (frontendData.deliveryChargePaidBySeller! < totalDeliveryCharge) {
         throw new ApiError(400, 'Insufficient delivery charge paid by seller')
       }
+      const existingTransaction = await prisma.payment.findUnique({
+        where: {
+          transactionId: frontendData.transactionId,
+        },
+      })
+      if (existingTransaction) {
+        throw new ApiError(400, 'এই ট্রানজেকশন আইডি ইতিমধ্যে ব্যবহৃত হয়েছে')
+      }
     }
 
     // get admin wallet info
