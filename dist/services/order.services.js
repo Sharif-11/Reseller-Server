@@ -769,5 +769,107 @@ class OrderServices {
             };
         });
     }
+    /**
+     * Get seller dashboard statistics
+     * @param sellerId - Seller ID to fetch statistics for
+     * @return Dashboard statistics including counts, financials, and trends
+     */
+    /**
+     * Get seller dashboard statistics
+     * @param sellerId - Seller ID to fetch statistics for
+     * @return Dashboard statistics including counts, financials, and trends
+     */
+    /**
+     * Get seller dashboard statistics
+     * @param sellerId - Seller ID to fetch statistics for
+     * @return Dashboard statistics including counts, financials, and trends
+     */
+    getSellerDashboardStats(sellerId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            // Single query to get all orders with necessary data
+            const allOrders = yield prisma_1.default.order.findMany({
+                where: { sellerId },
+                select: {
+                    orderStatus: true,
+                    orderCreatedAt: true,
+                    totalProductSellingPrice: true,
+                    actualCommission: true,
+                },
+            });
+            // Process data in memory to avoid multiple database calls
+            const stats = allOrders.reduce((acc, order) => {
+                var _a, _b;
+                const isLast7Days = order.orderCreatedAt >= sevenDaysAgo;
+                const sellingPrice = ((_a = order.totalProductSellingPrice) === null || _a === void 0 ? void 0 : _a.toNumber()) || 0;
+                const commission = ((_b = order.actualCommission) === null || _b === void 0 ? void 0 : _b.toNumber()) || 0;
+                // Overall counts
+                acc.overall.total++;
+                if (order.orderStatus === client_1.OrderStatus.completed) {
+                    acc.overall.completed++;
+                    acc.overall.totalSelling += sellingPrice;
+                    acc.overall.totalCommission += commission;
+                }
+                else if (order.orderStatus === client_1.OrderStatus.returned) {
+                    acc.overall.returned++;
+                }
+                else {
+                    acc.overall.others++;
+                }
+                // Last 7 days counts
+                if (isLast7Days) {
+                    acc.last7Days.total++;
+                    if (order.orderStatus === client_1.OrderStatus.completed) {
+                        acc.last7Days.completed++;
+                        acc.last7Days.totalSelling += sellingPrice;
+                        acc.last7Days.totalCommission += commission;
+                    }
+                    else if (order.orderStatus === client_1.OrderStatus.returned) {
+                        acc.last7Days.returned++;
+                    }
+                    else {
+                        acc.last7Days.others++;
+                    }
+                }
+                return acc;
+            }, {
+                overall: {
+                    total: 0,
+                    completed: 0,
+                    returned: 0,
+                    others: 0,
+                    totalSelling: 0,
+                    totalCommission: 0,
+                },
+                last7Days: {
+                    total: 0,
+                    completed: 0,
+                    returned: 0,
+                    others: 0,
+                    totalSelling: 0,
+                    totalCommission: 0,
+                },
+            });
+            return {
+                overall: {
+                    totalOrders: stats.overall.total,
+                    completedOrders: stats.overall.completed,
+                    returnedOrders: stats.overall.returned,
+                    otherOrders: stats.overall.others,
+                    totalSelling: stats.overall.totalSelling,
+                    totalCommission: stats.overall.totalCommission,
+                },
+                last7Days: {
+                    totalOrders: stats.last7Days.total,
+                    completedOrders: stats.last7Days.completed,
+                    returnedOrders: stats.last7Days.returned,
+                    otherOrders: stats.last7Days.others,
+                    totalSelling: stats.last7Days.totalSelling,
+                    totalCommission: stats.last7Days.totalCommission,
+                },
+            };
+        });
+    }
 }
 exports.default = new OrderServices();

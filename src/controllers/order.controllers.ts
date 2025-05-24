@@ -264,5 +264,23 @@ class OrderController {
       next(error)
     }
   }
+  async getSellerDashboardStats(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const sellerId = req.user?.userId
+      const stats = await OrderServices.getSellerDashboardStats(sellerId!)
+      res.status(200).json({
+        statusCode: 200,
+        message: 'ড্যাশবোর্ড পরিসংখ্যান সফলভাবে পাওয়া গেছে',
+        success: true,
+        data: stats,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
 }
 export default new OrderController()

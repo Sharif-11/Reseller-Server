@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import authControllers from '../controllers/auth.controllers'
+import orderControllers from '../controllers/order.controllers'
 import transactionController from '../controllers/transaction.controller'
 import { isAuthenticated, verifySeller } from '../middlewares/auth.middlewares'
 import { sellerPaymentRoutes } from './payment.routes'
@@ -15,6 +16,7 @@ sellerRouter.use('/wallets', walletRouter)
 sellerRouter.use('/withdraw', sellerWithdrawRouter)
 sellerRouter.use('/orders', SellerOrderRoutes)
 sellerRouter.use('/payments', sellerPaymentRoutes)
+sellerRouter.get('/dashboard', orderControllers.getSellerDashboardStats)
 sellerRouter.get('/transactions', transactionController.getTransactionOfUser)
 
 export default sellerRouter

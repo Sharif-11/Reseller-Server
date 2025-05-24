@@ -295,5 +295,23 @@ class OrderController {
             }
         });
     }
+    getSellerDashboardStats(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const sellerId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+                const stats = yield order_services_1.default.getSellerDashboardStats(sellerId);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'ড্যাশবোর্ড পরিসংখ্যান সফলভাবে পাওয়া গেছে',
+                    success: true,
+                    data: stats,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
 }
 exports.default = new OrderController();

@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_controllers_1 = __importDefault(require("../controllers/auth.controllers"));
+const order_controllers_1 = __importDefault(require("../controllers/order.controllers"));
 const transaction_controller_1 = __importDefault(require("../controllers/transaction.controller"));
 const auth_middlewares_1 = require("../middlewares/auth.middlewares");
 const payment_routes_1 = require("./payment.routes");
@@ -20,5 +21,6 @@ sellerRouter.use('/wallets', wallet_routes_1.default);
 sellerRouter.use('/withdraw', sellerWithdraw_routes_1.default);
 sellerRouter.use('/orders', sellerOrder_routes_1.default);
 sellerRouter.use('/payments', payment_routes_1.sellerPaymentRoutes);
+sellerRouter.get('/dashboard', order_controllers_1.default.getSellerDashboardStats);
 sellerRouter.get('/transactions', transaction_controller_1.default.getTransactionOfUser);
 exports.default = sellerRouter;
