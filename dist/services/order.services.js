@@ -61,8 +61,9 @@ class OrderServices {
     verifyOrderProducts(products) {
         return __awaiter(this, void 0, void 0, function* () {
             const productPremises = products.map((product) => __awaiter(this, void 0, void 0, function* () {
-                const { productId, name: productName, basePrice: productBasePrice, images, published, } = yield product_services_1.default.getProduct(product.productId);
-                const isValidImage = images.some(image => image.imageUrl === product.productImage);
+                const { productId, name: productName, basePrice: productBasePrice, images, published, imageUrl, } = yield product_services_1.default.getProduct(product.productId);
+                const isValidImage = images.some(image => image.imageUrl === product.productImage) ||
+                    imageUrl === product.productImage;
                 if (!published) {
                     throw new ApiError_1.default(400, 'Hidden product cannot be ordered');
                 }
@@ -94,8 +95,9 @@ class OrderServices {
             const { name: sellerName, phoneNo: sellerPhoneNo, balance: sellerBalance, isVerified: sellerVerified, shopName: sellerShopName, } = seller;
             // [Backend Fetching Needed] Get product details (name, image, base price) for each product
             const enrichedProductsPromise = frontendData.products.map((product) => __awaiter(this, void 0, void 0, function* () {
-                const { productId, name: productName, basePrice: productBasePrice, images, published, } = yield product_services_1.default.getProduct(product.productId);
-                const isValidImage = images.some(image => image.imageUrl === product.productImage);
+                const { productId, name: productName, basePrice: productBasePrice, images, published, imageUrl, } = yield product_services_1.default.getProduct(product.productId);
+                const isValidImage = images.some(image => image.imageUrl === product.productImage) ||
+                    imageUrl === product.productImage;
                 if (!published) {
                     throw new ApiError_1.default(400, 'Hidden product cannot be ordered');
                 }

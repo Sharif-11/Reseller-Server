@@ -87,10 +87,11 @@ class OrderServices {
         basePrice: productBasePrice,
         images,
         published,
+        imageUrl,
       } = await productServices.getProduct(product.productId)
-      const isValidImage = images.some(
-        image => image.imageUrl === product.productImage
-      )
+      const isValidImage =
+        images.some(image => image.imageUrl === product.productImage) ||
+        imageUrl === product.productImage
       if (!published) {
         throw new ApiError(400, 'Hidden product cannot be ordered')
       }
@@ -161,10 +162,11 @@ class OrderServices {
         basePrice: productBasePrice,
         images,
         published,
+        imageUrl,
       } = await productServices.getProduct(product.productId)
-      const isValidImage = images.some(
-        image => image.imageUrl === product.productImage
-      )
+      const isValidImage =
+        images.some(image => image.imageUrl === product.productImage) ||
+        imageUrl === product.productImage
 
       if (!published) {
         throw new ApiError(400, 'Hidden product cannot be ordered')
