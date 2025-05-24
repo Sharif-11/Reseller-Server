@@ -13,69 +13,23 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const commission_services_1 = __importDefault(require("../services/commission.services"));
+const ApiError_1 = __importDefault(require("../utils/ApiError"));
 class CommissionController {
     /**
-     * Create commissions in the database
+     * Completely replace the commission table (PUT semantics)
      */
-    createCommissions(req, res, next) {
+    replaceCommissionTable(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { data } = req.body; // Input data should contain the array of commission objects
-                const message = yield commission_services_1.default.createCommissions(data);
-                res.status(201).json({
-                    statusCode: 201,
-                    message: 'Commissions created successfully.',
-                    success: true,
-                    data: message,
-                });
-            }
-            catch (error) {
-                next(error);
-            }
-        });
-    }
-    getCommissionsByPrice(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const { price } = req.params; // Price should be passed as a route parameter
-                const commissions = yield commission_services_1.default.getCommissionsByPrice(Number(price));
+                const { data } = req.body;
+                if (!Array.isArray(data)) {
+                    throw new ApiError_1.default(400, 'অনুগ্রহ করে একটি বৈধ ডেটা অ্যারে প্রদান করুন');
+                }
+                const updatedTable = yield commission_services_1.default.replaceCommissionTable(data);
                 res.status(200).json({
-                    statusCode: 200,
-                    message: `Commissions retrieved successfully for price: ${price}`,
                     success: true,
-                    data: commissions,
-                });
-            }
-            catch (error) {
-                next(error);
-            }
-        });
-    }
-    getFullCommissionTable(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const fullTable = yield commission_services_1.default.getFullCommissionTable();
-                res.status(200).json({
                     statusCode: 200,
-                    message: 'Full commission table retrieved successfully.',
-                    success: true,
-                    data: fullTable,
-                });
-            }
-            catch (error) {
-                next(error);
-            }
-        });
-    }
-    updateCommissionTable(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const { data } = req.body; // Input should include the array of commission objects
-                const updatedTable = yield commission_services_1.default.updateCommissionTable(data);
-                res.status(200).json({
-                    statusCode: 200,
-                    message: 'Commissions table updated successfully.',
-                    success: true,
+                    message: 'কমিশন টেবিল সফলভাবে আপডেট করা হয়েছে',
                     data: updatedTable,
                 });
             }
@@ -84,16 +38,68 @@ class CommissionController {
             }
         });
     }
-    calculateCommissions(req, res, next) {
+    /**
+     * Get the complete commission table
+     */
+    getCommissionTable(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { price, phoneNo } = req.body; // Price should be passed as a route parameter
-                const commissions = yield commission_services_1.default.calculateCommissions(phoneNo, Number(price));
+                const commissionTable = yield commission_services_1.default.getCommissionTable();
                 res.status(200).json({
-                    statusCode: 200,
-                    message: 'Commissions calculated successfully.',
                     success: true,
+                    statusCode: 200,
+                    message: 'কমিশন টেবিল সফলভাবে retrieved করা হয়েছে',
+                    data: commissionTable,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    /**
+     * Get commissions for a specific price point
+     */
+    getCommissionsForPrice(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const price = parseFloat(req.params.price);
+                if (isNaN(price)) {
+                    throw new ApiError_1.default(400, 'অবৈধ মূল্য পরামিতি');
+                }
+                const commissions = yield commission_services_1.default.getCommissionsByPrice(price);
+                res.status(200).json({
+                    success: true,
+                    statusCode: 200,
+                    message: `${price} টাকার জন্য কমিশন সফলভাবে retrieved করা হয়েছে`,
                     data: commissions,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    /**
+     * Calculate commissions for a user's purchase
+     */
+    calculateUserCommissions(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { phoneNo, price } = req.body;
+                if (!phoneNo || !price) {
+                    throw new ApiError_1.default(400, 'ফোন নম্বর এবং মূল্য উভয়ই প্রয়োজন');
+                }
+                const numericPrice = parseFloat(price);
+                if (isNaN(numericPrice)) {
+                    throw new ApiError_1.default(400, 'মূল্য একটি বৈধ সংখ্যা হতে হবে');
+                }
+                const commissionDistribution = yield commission_services_1.default.calculateUserCommissions(phoneNo, numericPrice);
+                res.status(200).json({
+                    success: true,
+                    statusCode: 200,
+                    message: 'কমিশন হিসাব সফলভাবে সম্পন্ন হয়েছে',
+                    data: commissionDistribution,
                 });
             }
             catch (error) {

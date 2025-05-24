@@ -172,7 +172,7 @@ model Transaction {
 model Commission {
   id         Int      @id @default(autoincrement())
   startPrice Decimal  @db.Decimal(15, 2)
-  endPrice   Decimal  @db.Decimal(15, 2)
+  endPrice   Decimal? @db.Decimal(15, 2)
   commission Decimal  @db.Decimal(15, 2)
   level      Int
   createdAt  DateTime @default(now())

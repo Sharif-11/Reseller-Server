@@ -13,150 +13,152 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommissionService = void 0;
+const client_1 = require("@prisma/client");
 const ApiError_1 = __importDefault(require("../utils/ApiError"));
 const prisma_1 = __importDefault(require("../utils/prisma"));
 class CommissionService {
-    constructor() {
-        this.hasOverlappingRanges = (ranges) => {
-            ranges.sort((a, b) => a.startPrice - b.startPrice);
-            for (let i = 0; i < ranges.length - 1; i++) {
-                if (ranges[i].endPrice >= ranges[i + 1].startPrice) {
-                    return true;
+    static validateCommissionRanges(data) {
+        // Check all amounts arrays have same length
+        const levelCount = new Set(data.map(item => item.amounts.length));
+        if (levelCount.size > 1) {
+            throw new ApiError_1.default(400, 'সমস্ত কমিশন লেভেলে একই সংখ্যক অ্যামাউন্ট থাকতে হবে');
+        }
+        // Check for non-positive values
+        for (const row of data) {
+            if (row.startPrice <= 0) {
+                throw new ApiError_1.default(400, `শুরুর মূল্য অবশ্যই ধনাত্মক হতে হবে (পাওয়া গেছে ${row.startPrice})`);
+            }
+            if (row.endPrice && row.endPrice <= 0) {
+                throw new ApiError_1.default(400, `শেষ মূল্য অবশ্যই ধনাত্মক হতে হবে (পাওয়া গেছে ${row.endPrice})`);
+            }
+            for (const amount of row.amounts) {
+                if (amount <= 0) {
+                    throw new ApiError_1.default(400, `কমিশনের পরিমাণ অবশ্যই ধনাত্মক হতে হবে (পাওয়া গেছে ${amount})`);
                 }
             }
-            return false;
-        };
-        this.validateAmountsArray = (input) => {
-            const validLengths = input.map(({ amounts }) => amounts.filter(amount => amount !== null).length);
-            return validLengths.every(length => length === validLengths[0]);
-        };
-        this.createCommissionEntries = (data) => {
-            const commissionEntries = data
-                .map(({ startPrice, endPrice, amounts }) => amounts.map((commission, index) => ({
-                startPrice,
-                endPrice,
-                level: index + 1,
-                commission,
-            })))
-                .flat();
-            return commissionEntries;
-        };
+        }
+        // Check for overlapping ranges
+        const sortedRanges = [...data].sort((a, b) => a.startPrice - b.startPrice);
+        for (let i = 0; i < sortedRanges.length - 1; i++) {
+            const current = sortedRanges[i];
+            const next = sortedRanges[i + 1];
+            if (current.endPrice >= next.startPrice) {
+                throw new ApiError_1.default(400, `রেঞ্জ ওভারল্যাপ ডিটেক্টেড: ${current.startPrice}-${current.endPrice} ওভারল্যাপ করছে ${next.startPrice}-${next.endPrice} এর সাথে`);
+            }
+        }
     }
-    createCommissions(data) {
+    static transformToDatabaseFormat(data) {
+        return data.flatMap(row => row.amounts.map((commission, index) => ({
+            startPrice: new client_1.Prisma.Decimal(row.startPrice),
+            endPrice: row.endPrice ? new client_1.Prisma.Decimal(row.endPrice) : null,
+            level: index + 1,
+            commission: new client_1.Prisma.Decimal(commission),
+        })));
+    }
+    replaceCommissionTable(data) {
         return __awaiter(this, void 0, void 0, function* () {
-            // Validation: Check if amounts arrays are consistent
-            if (!this.validateAmountsArray(data)) {
-                throw new Error('All amounts arrays must have the same length (excluding empty elements).');
-            }
-            // Validation: Check for overlapping ranges
-            if (this.hasOverlappingRanges(data)) {
-                throw new Error('Input contains overlapping ranges.');
-            }
-            // Prepare data for batch insertion
-            // Use Prisma createMany for batch insertion
-            const commissionEntries = this.createCommissionEntries(data);
-            try {
-                yield prisma_1.default.commission.createMany({
+            // Validate input data
+            CommissionService.validateCommissionRanges(data);
+            // Transform to database format
+            const commissionEntries = CommissionService.transformToDatabaseFormat(data);
+            // Transaction for atomic replacement
+            return yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                // Clear existing data
+                yield tx.commission.deleteMany();
+                // Insert new data
+                yield tx.commission.createMany({
                     data: commissionEntries,
-                    skipDuplicates: true, // Prevent duplication in case of unique constraint violations
                 });
-                return yield this.getFullCommissionTable();
+                // Return the newly created data in the original format
+                return this.formatCommissionTable(yield tx.commission.findMany({
+                    orderBy: [{ startPrice: 'asc' }, { level: 'asc' }],
+                }));
+            }));
+        });
+    }
+    formatCommissionTable(commissions) {
+        var _a, _b;
+        const grouped = new Map();
+        for (const commission of commissions) {
+            const key = `${commission.startPrice}-${commission.endPrice}`;
+            if (!grouped.has(key)) {
+                grouped.set(key, {
+                    startPrice: commission.startPrice.toNumber(),
+                    endPrice: (_b = (_a = commission.endPrice) === null || _a === void 0 ? void 0 : _a.toNumber()) !== null && _b !== void 0 ? _b : null,
+                    amounts: [],
+                });
             }
-            catch (error) {
-                throw new ApiError_1.default(400, 'Error creating commissions.');
-            }
-            // Return the newly created rows
+            const group = grouped.get(key);
+            group.amounts[commission.level - 1] = commission.commission.toNumber();
+        }
+        return Array.from(grouped.values()).sort((a, b) => a.startPrice - b.startPrice);
+    }
+    getCommissionTable() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const commissions = yield prisma_1.default.commission.findMany({
+                orderBy: [{ startPrice: 'asc' }, { level: 'asc' }],
+            });
+            return this.formatCommissionTable(commissions);
         });
     }
     getCommissionsByPrice(price) {
         return __awaiter(this, void 0, void 0, function* () {
-            // Fetch all commissions matching the given price range
+            if (price <= 0) {
+                throw new ApiError_1.default(400, 'মূল্য অবশ্যই ধনাত্মক হতে হবে');
+            }
             const commissions = yield prisma_1.default.commission.findMany({
                 where: {
                     startPrice: { lte: price },
-                    endPrice: { gte: price },
+                    OR: [
+                        { endPrice: { gte: price } },
+                        { endPrice: null }, // For open-ended ranges (e.g., 1500+)
+                    ],
                 },
-                orderBy: { level: 'asc' }, // Ensure the commissions are sorted by level
+                orderBy: { level: 'asc' },
             });
             if (commissions.length === 0) {
-                throw new Error(`No commissions found for price: ${price}`);
+                throw new ApiError_1.default(404, `${price} টাকার জন্য কোনো কমিশন পাওয়া যায়নি`);
             }
-            // Extract and return the commission amounts as an array
-            return commissions;
+            return commissions.map(c => ({
+                level: c.level,
+                commission: c.commission.toNumber(),
+            }));
         });
     }
-    updateCommissionTable(data) {
+    calculateUserCommissions(userPhone, price) {
         return __awaiter(this, void 0, void 0, function* () {
-            // Validation: Ensure amounts arrays are consistent
-            if (!this.validateAmountsArray(data)) {
-                throw new Error('All amounts arrays must have the same length (excluding empty elements).');
+            if (price <= 0) {
+                throw new ApiError_1.default(400, 'মূল্য অবশ্যই ধনাত্মক হতে হবে');
             }
-            // Validation: Check for overlapping ranges
-            if (this.hasOverlappingRanges(data)) {
-                throw new Error('Input contains overlapping ranges.');
-            }
-            const commissionEntries = this.createCommissionEntries(data);
-            // Transaction to replace the existing table
-            yield prisma_1.default.$transaction([
-                prisma_1.default.commission.deleteMany(), // Delete all existing rows
-                prisma_1.default.commission.createMany({
-                    data: commissionEntries,
-                    skipDuplicates: false, // Ensure all rows are inserted
-                }),
+            const [commissions, parentTree] = yield Promise.all([
+                this.getCommissionsByPrice(price),
+                this.getUserParentTree(userPhone),
             ]);
-            return yield this.getFullCommissionTable();
+            return parentTree.map(parent => {
+                var _a;
+                return ({
+                    phoneNo: parent.phoneNo,
+                    name: parent.name,
+                    level: parent.level,
+                    commissionAmount: ((_a = commissions.find(c => c.level === parent.level)) === null || _a === void 0 ? void 0 : _a.commission) || 0,
+                });
+            });
         });
     }
-    getFullCommissionTable() {
+    getUserParentTree(userPhone) {
         return __awaiter(this, void 0, void 0, function* () {
-            // Fetch all rows from the commission table
-            const commissions = yield prisma_1.default.commission.findMany({
-                orderBy: [{ startPrice: 'asc' }, { level: 'asc' }], // Sort by startPrice and level
-            });
-            // Group commissions by startPrice and endPrice
-            const groupedData = commissions.reduce((acc, curr) => {
-                const { startPrice, endPrice, level, commission } = curr;
-                const key = `${startPrice}-${endPrice}`;
-                if (!acc[key]) {
-                    acc[key] = {
-                        startPrice: Number(startPrice),
-                        endPrice: Number(endPrice),
-                        amounts: [],
-                    };
-                }
-                // Place the commission in the correct position based on the level
-                acc[key].amounts[level - 1] = commission.toNumber();
-                return acc;
-            }, {});
-            // Convert grouped data to an array
-            return Object.values(groupedData);
-        });
-    }
-    calculateCommissions(userPhone, price) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // Step 1: Fetch all commission levels for the given price
-            const commissions = yield prisma_1.default.commission.findMany({
-                where: {
-                    startPrice: { lte: price },
-                    endPrice: { gte: price },
-                },
-                orderBy: { level: 'asc' }, // Ensure commissions are sorted by level
-            });
-            // Step 2: Fetch all parents of the user using a recursive CTE-like logic
-            const parentTree = yield prisma_1.default.$queryRawUnsafe(`
+            return yield prisma_1.default.$queryRaw `
       WITH RECURSIVE parent_tree AS (
-        -- Base case: start with the target user
         SELECT 
           "phoneNo", 
           "name", 
           0 AS "level", 
           "referredByPhone"
         FROM "users"
-        WHERE "phoneNo" = '${userPhone}' -- Replace with the target user's phone number
-  
+        WHERE "phoneNo" = ${userPhone}
+        
         UNION ALL
-  
-        -- Recursive case: find the parent of each user in the tree
+        
         SELECT 
           u."phoneNo", 
           u."name", 
@@ -170,21 +172,9 @@ class CommissionService {
         "name", 
         "level"
       FROM parent_tree
-      WHERE "phoneNo" != '${userPhone}' -- Exclude the target user
-      ORDER BY "level";
-    `, userPhone);
-            // Step 3: Map commissions to the parent tree
-            const result = parentTree.map((parent) => {
-                const commission = commissions.find(c => c.level === parent.level);
-                return {
-                    phoneNo: parent.phoneNo,
-                    name: parent.name,
-                    level: parent.level,
-                    commissionAmount: commission ? commission.commission : 0, // Assign commission if found
-                };
-            });
-            console.log({ commissions, parentTree, result });
-            return result;
+      WHERE "phoneNo" != ${userPhone}
+      ORDER BY "level"
+    `;
         });
     }
 }

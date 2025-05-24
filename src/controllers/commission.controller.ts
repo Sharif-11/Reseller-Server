@@ -1,88 +1,110 @@
 import { NextFunction, Request, Response } from 'express'
-import commissionServices from '../services/commission.services'
+import commissionService from '../services/commission.services'
+import ApiError from '../utils/ApiError'
 
 class CommissionController {
   /**
-   * Create commissions in the database
+   * Completely replace the commission table (PUT semantics)
    */
-  async createCommissions(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { data } = req.body // Input data should contain the array of commission objects
-      const message = await commissionServices.createCommissions(data)
-
-      res.status(201).json({
-        statusCode: 201,
-        message: 'Commissions created successfully.',
-        success: true,
-        data: message,
-      })
-    } catch (error) {
-      next(error)
-    }
-  }
-  async getCommissionsByPrice(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { price } = req.params // Price should be passed as a route parameter
-      const commissions = await commissionServices.getCommissionsByPrice(
-        Number(price)
-      )
-
-      res.status(200).json({
-        statusCode: 200,
-        message: `Commissions retrieved successfully for price: ${price}`,
-        success: true,
-        data: commissions,
-      })
-    } catch (error) {
-      next(error)
-    }
-  }
-  async getFullCommissionTable(
+  async replaceCommissionTable(
     req: Request,
     res: Response,
     next: NextFunction
   ) {
     try {
-      const fullTable = await commissionServices.getFullCommissionTable()
+      const { data } = req.body
+
+      if (!Array.isArray(data)) {
+        throw new ApiError(400, 'অনুগ্রহ করে একটি বৈধ ডেটা অ্যারে প্রদান করুন')
+      }
+
+      const updatedTable = await commissionService.replaceCommissionTable(data)
 
       res.status(200).json({
-        statusCode: 200,
-        message: 'Full commission table retrieved successfully.',
         success: true,
-        data: fullTable,
-      })
-    } catch (error) {
-      next(error)
-    }
-  }
-  async updateCommissionTable(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { data } = req.body // Input should include the array of commission objects
-      const updatedTable = await commissionServices.updateCommissionTable(data)
-
-      res.status(200).json({
         statusCode: 200,
-        message: 'Commissions table updated successfully.',
-        success: true,
+        message: 'কমিশন টেবিল সফলভাবে আপডেট করা হয়েছে',
         data: updatedTable,
       })
     } catch (error) {
       next(error)
     }
   }
-  async calculateCommissions(req: Request, res: Response, next: NextFunction) {
+
+  /**
+   * Get the complete commission table
+   */
+  async getCommissionTable(req: Request, res: Response, next: NextFunction) {
     try {
-      const { price, phoneNo } = req.body // Price should be passed as a route parameter
-      const commissions = await commissionServices.calculateCommissions(
-        phoneNo,
-        Number(price)
-      )
+      const commissionTable = await commissionService.getCommissionTable()
 
       res.status(200).json({
-        statusCode: 200,
-        message: 'Commissions calculated successfully.',
         success: true,
+        statusCode: 200,
+        message: 'কমিশন টেবিল সফলভাবে retrieved করা হয়েছে',
+        data: commissionTable,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * Get commissions for a specific price point
+   */
+  async getCommissionsForPrice(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const price = parseFloat(req.params.price)
+
+      if (isNaN(price)) {
+        throw new ApiError(400, 'অবৈধ মূল্য পরামিতি')
+      }
+
+      const commissions = await commissionService.getCommissionsByPrice(price)
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: `${price} টাকার জন্য কমিশন সফলভাবে retrieved করা হয়েছে`,
         data: commissions,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  /**
+   * Calculate commissions for a user's purchase
+   */
+  async calculateUserCommissions(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { phoneNo, price } = req.body
+
+      if (!phoneNo || !price) {
+        throw new ApiError(400, 'ফোন নম্বর এবং মূল্য উভয়ই প্রয়োজন')
+      }
+
+      const numericPrice = parseFloat(price)
+      if (isNaN(numericPrice)) {
+        throw new ApiError(400, 'মূল্য একটি বৈধ সংখ্যা হতে হবে')
+      }
+
+      const commissionDistribution =
+        await commissionService.calculateUserCommissions(phoneNo, numericPrice)
+
+      res.status(200).json({
+        success: true,
+        statusCode: 200,
+        message: 'কমিশন হিসাব সফলভাবে সম্পন্ন হয়েছে',
+        data: commissionDistribution,
       })
     } catch (error) {
       next(error)
