@@ -301,6 +301,16 @@ model Payment {
   @@map("payments")
 }
 
+model Announcements {
+  id            Int      @id @default(autoincrement())
+  announcements Json[]   @db.JsonB
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([id])
+  @@map("announcements")
+}
+
 enum OrderStatus {
   unverified
   pending
