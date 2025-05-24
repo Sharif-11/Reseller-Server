@@ -3,7 +3,7 @@ import Decimal from 'decimal.js'
 import config from '../config'
 import ApiError from '../utils/ApiError'
 import prisma from '../utils/prisma'
-import referralService from './commission.utils'
+import commissionServices from './commission.services'
 import paymentServices from './payment.services'
 import productServices from './product.services'
 import transactionServices from './transaction.services'
@@ -730,24 +730,46 @@ class OrderServices {
         tx,
         userId: order.sellerId,
       })
-      const referrer = seller.referredBy
-      if (referrer) {
-        const referralCommission = referralService.calculateReferralCommission(
-          1,
-          order.totalProductBasePrice.toNumber()
+      // const referrer = seller.referredBy
+      // if (referrer) {
+      //   const referralCommission = referralService.calculateReferralCommission(
+      //     1,
+      //     order.totalProductBasePrice.toNumber()
+      //   )
+      //   await transactionServices.addReferralCommission({
+      //     tx,
+      //     userId: referrer.userId,
+      //     amount: referralCommission,
+      //     userName: referrer.name,
+      //     userPhoneNo: referrer.phoneNo,
+      //     referralLevel: 1,
+      //     reference: JSON.stringify({
+      //       name: order.sellerName,
+      //       referralLevel: 1,
+      //     }),
+      //   })
+      // }
+      const referrers = await commissionServices.calculateUserCommissions(
+        seller.phoneNo,
+        order.totalProductBasePrice.toNumber()
+      )
+      console.log('Referrers:', referrers)
+      if (referrers.length > 0) {
+        const referralPromises = referrers.map(referrer =>
+          transactionServices.addReferralCommission({
+            tx,
+            userId: referrer.userId,
+            amount: referrer.commissionAmount,
+            userName: referrer.name,
+            userPhoneNo: referrer.phoneNo,
+            referralLevel: referrer.level,
+            reference: JSON.stringify({
+              name: order.sellerName,
+              referralLevel: referrer.level,
+            }),
+          })
         )
-        await transactionServices.addReferralCommission({
-          tx,
-          userId: referrer.userId,
-          amount: referralCommission,
-          userName: referrer.name,
-          userPhoneNo: referrer.phoneNo,
-          referralLevel: 1,
-          reference: JSON.stringify({
-            name: order.sellerName,
-            referralLevel: 1,
-          }),
-        })
+        await Promise.all(referralPromises)
       }
 
       return updatedOrder

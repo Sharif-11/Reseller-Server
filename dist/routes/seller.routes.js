@@ -8,6 +8,7 @@ const auth_controllers_1 = __importDefault(require("../controllers/auth.controll
 const order_controllers_1 = __importDefault(require("../controllers/order.controllers"));
 const transaction_controller_1 = __importDefault(require("../controllers/transaction.controller"));
 const auth_middlewares_1 = require("../middlewares/auth.middlewares");
+const commissions_routes_1 = require("./commissions.routes");
 const payment_routes_1 = require("./payment.routes");
 const sellerOrder_routes_1 = __importDefault(require("./sellerOrder.routes"));
 const sellerProducts_route_1 = __importDefault(require("./sellerProducts.route"));
@@ -22,5 +23,6 @@ sellerRouter.use('/withdraw', sellerWithdraw_routes_1.default);
 sellerRouter.use('/orders', sellerOrder_routes_1.default);
 sellerRouter.use('/payments', payment_routes_1.sellerPaymentRoutes);
 sellerRouter.get('/dashboard', order_controllers_1.default.getSellerDashboardStats);
+sellerRouter.use('/commissions', commissions_routes_1.sellerCommissionRoutes);
 sellerRouter.get('/transactions', transaction_controller_1.default.getTransactionOfUser);
 exports.default = sellerRouter;

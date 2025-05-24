@@ -2,11 +2,13 @@ import { Router } from 'express'
 import commissionController from '../controllers/commission.controller'
 
 const commissionRoutes = Router()
+const sellerCommissionRoutes = Router()
 
 // Commission Table Management
 commissionRoutes.put('/', commissionController.replaceCommissionTable)
 
 commissionRoutes.get('/', commissionController.getCommissionTable)
+sellerCommissionRoutes.get('/', commissionController.getCommissionTable)
 
 // Commission Calculations
 commissionRoutes.post(
@@ -20,3 +22,4 @@ commissionRoutes.get(
 )
 
 export default commissionRoutes
+export { sellerCommissionRoutes }

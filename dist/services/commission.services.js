@@ -18,6 +18,10 @@ const ApiError_1 = __importDefault(require("../utils/ApiError"));
 const prisma_1 = __importDefault(require("../utils/prisma"));
 class CommissionService {
     static validateCommissionRanges(data) {
+        // check for empty amounts
+        if (data.some(row => row.amounts.length === 0)) {
+            throw new ApiError_1.default(400, 'দয়া করে লেভেল  যোগ করুন');
+        }
         // Check all amounts arrays have same length
         const levelCount = new Set(data.map(item => item.amounts.length));
         if (levelCount.size > 1) {
@@ -28,7 +32,7 @@ class CommissionService {
             if (row.startPrice <= 0) {
                 throw new ApiError_1.default(400, `শুরুর মূল্য অবশ্যই ধনাত্মক হতে হবে (পাওয়া গেছে ${row.startPrice})`);
             }
-            if (row.endPrice && row.endPrice <= 0) {
+            if (row.endPrice !== null && row.endPrice <= 0) {
                 throw new ApiError_1.default(400, `শেষ মূল্য অবশ্যই ধনাত্মক হতে হবে (পাওয়া গেছে ${row.endPrice})`);
             }
             for (const amount of row.amounts) {
@@ -37,20 +41,31 @@ class CommissionService {
                 }
             }
         }
-        // Check for overlapping ranges
+        // Sort ranges by startPrice
         const sortedRanges = [...data].sort((a, b) => a.startPrice - b.startPrice);
+        // Check that only the last range has null endPrice
+        const openEndedRanges = sortedRanges.filter(r => r.endPrice === null);
+        if (openEndedRanges.length !== 1 ||
+            openEndedRanges[0] !== sortedRanges[sortedRanges.length - 1]) {
+            throw new ApiError_1.default(400, 'শুধুমাত্র শেষ রেঞ্জটির শেষ মূল্য null (খোলা-শেষ) হতে পারে');
+        }
+        // Check for continuous ranges without gaps
         for (let i = 0; i < sortedRanges.length - 1; i++) {
             const current = sortedRanges[i];
             const next = sortedRanges[i + 1];
-            if (current.endPrice >= next.startPrice) {
-                throw new ApiError_1.default(400, `রেঞ্জ ওভারল্যাপ ডিটেক্টেড: ${current.startPrice}-${current.endPrice} ওভারল্যাপ করছে ${next.startPrice}-${next.endPrice} এর সাথে`);
+            if (current.endPrice === null) {
+                throw new ApiError_1.default(400, 'শুধুমাত্র শেষ রেঞ্জটি খোলা-শেষ হতে পারে');
+            }
+            if (current.endPrice !== next.startPrice) {
+                throw new ApiError_1.default(400, `রেঞ্জগুলি অবিচ্ছিন্ন হতে হবে: ${current.startPrice}-${current.endPrice} এর শেষ মূল্য ` +
+                    `অবশ্যই ${next.startPrice}-${next.endPrice} এর শুরুর মূল্যের সমান হতে হবে`);
             }
         }
     }
     static transformToDatabaseFormat(data) {
         return data.flatMap(row => row.amounts.map((commission, index) => ({
             startPrice: new client_1.Prisma.Decimal(row.startPrice),
-            endPrice: row.endPrice ? new client_1.Prisma.Decimal(row.endPrice) : null,
+            endPrice: row.endPrice !== null ? new client_1.Prisma.Decimal(row.endPrice) : null,
             level: index + 1,
             commission: new client_1.Prisma.Decimal(commission),
         })));
@@ -111,7 +126,7 @@ class CommissionService {
                     startPrice: { lte: price },
                     OR: [
                         { endPrice: { gte: price } },
-                        { endPrice: null }, // For open-ended ranges (e.g., 1500+)
+                        { endPrice: null }, // For open-ended ranges
                     ],
                 },
                 orderBy: { level: 'asc' },
@@ -134,15 +149,18 @@ class CommissionService {
                 this.getCommissionsByPrice(price),
                 this.getUserParentTree(userPhone),
             ]);
-            return parentTree.map(parent => {
+            const result = parentTree.map(parent => {
                 var _a;
                 return ({
                     phoneNo: parent.phoneNo,
                     name: parent.name,
                     level: parent.level,
+                    userId: parent.userId,
                     commissionAmount: ((_a = commissions.find(c => c.level === parent.level)) === null || _a === void 0 ? void 0 : _a.commission) || 0,
                 });
             });
+            // Filter out users with zero commission
+            return result.filter(user => user.commissionAmount > 0);
         });
     }
     getUserParentTree(userPhone) {
@@ -152,6 +170,7 @@ class CommissionService {
         SELECT 
           "phoneNo", 
           "name", 
+          "userId",
           0 AS "level", 
           "referredByPhone"
         FROM "users"
@@ -162,6 +181,7 @@ class CommissionService {
         SELECT 
           u."phoneNo", 
           u."name", 
+          u."userId",
           pt."level" + 1 AS "level", 
           u."referredByPhone"
         FROM "users" u
@@ -170,7 +190,8 @@ class CommissionService {
       SELECT 
         "phoneNo", 
         "name", 
-        "level"
+        "level",
+        "userId"
       FROM parent_tree
       WHERE "phoneNo" != ${userPhone}
       ORDER BY "level"

@@ -4,8 +4,12 @@ import prisma from '../utils/prisma'
 
 export class CommissionService {
   private static validateCommissionRanges(
-    data: { startPrice: number; endPrice: number; amounts: number[] }[]
+    data: { startPrice: number; endPrice: number | null; amounts: number[] }[]
   ): void {
+    // check for empty amounts
+    if (data.some(row => row.amounts.length === 0)) {
+      throw new ApiError(400, 'দয়া করে লেভেল  যোগ করুন')
+    }
     // Check all amounts arrays have same length
     const levelCount = new Set(data.map(item => item.amounts.length))
     if (levelCount.size > 1) {
@@ -24,7 +28,7 @@ export class CommissionService {
         )
       }
 
-      if (row.endPrice && row.endPrice <= 0) {
+      if (row.endPrice !== null && row.endPrice <= 0) {
         throw new ApiError(
           400,
           `শেষ মূল্য অবশ্যই ধনাত্মক হতে হবে (পাওয়া গেছে ${row.endPrice})`
@@ -41,29 +45,48 @@ export class CommissionService {
       }
     }
 
-    // Check for overlapping ranges
+    // Sort ranges by startPrice
     const sortedRanges = [...data].sort((a, b) => a.startPrice - b.startPrice)
 
+    // Check that only the last range has null endPrice
+    const openEndedRanges = sortedRanges.filter(r => r.endPrice === null)
+    if (
+      openEndedRanges.length !== 1 ||
+      openEndedRanges[0] !== sortedRanges[sortedRanges.length - 1]
+    ) {
+      throw new ApiError(
+        400,
+        'শুধুমাত্র শেষ রেঞ্জটির শেষ মূল্য null (খোলা-শেষ) হতে পারে'
+      )
+    }
+
+    // Check for continuous ranges without gaps
     for (let i = 0; i < sortedRanges.length - 1; i++) {
       const current = sortedRanges[i]
       const next = sortedRanges[i + 1]
 
-      if (current.endPrice >= next.startPrice) {
+      if (current.endPrice === null) {
+        throw new ApiError(400, 'শুধুমাত্র শেষ রেঞ্জটি খোলা-শেষ হতে পারে')
+      }
+
+      if (current.endPrice !== next.startPrice) {
         throw new ApiError(
           400,
-          `রেঞ্জ ওভারল্যাপ ডিটেক্টেড: ${current.startPrice}-${current.endPrice} ওভারল্যাপ করছে ${next.startPrice}-${next.endPrice} এর সাথে`
+          `রেঞ্জগুলি অবিচ্ছিন্ন হতে হবে: ${current.startPrice}-${current.endPrice} এর শেষ মূল্য ` +
+            `অবশ্যই ${next.startPrice}-${next.endPrice} এর শুরুর মূল্যের সমান হতে হবে`
         )
       }
     }
   }
 
   private static transformToDatabaseFormat(
-    data: { startPrice: number; endPrice: number; amounts: number[] }[]
+    data: { startPrice: number; endPrice: number | null; amounts: number[] }[]
   ): Prisma.CommissionCreateManyInput[] {
     return data.flatMap(row =>
       row.amounts.map((commission, index) => ({
         startPrice: new Prisma.Decimal(row.startPrice),
-        endPrice: row.endPrice ? new Prisma.Decimal(row.endPrice) : null,
+        endPrice:
+          row.endPrice !== null ? new Prisma.Decimal(row.endPrice) : null,
         level: index + 1,
         commission: new Prisma.Decimal(commission),
       }))
@@ -71,7 +94,7 @@ export class CommissionService {
   }
 
   async replaceCommissionTable(
-    data: { startPrice: number; endPrice: number; amounts: number[] }[]
+    data: { startPrice: number; endPrice: number | null; amounts: number[] }[]
   ): Promise<
     { startPrice: number; endPrice: number | null; amounts: number[] }[]
   > {
@@ -152,7 +175,7 @@ export class CommissionService {
         startPrice: { lte: price },
         OR: [
           { endPrice: { gte: price } },
-          { endPrice: null }, // For open-ended ranges (e.g., 1500+)
+          { endPrice: null }, // For open-ended ranges
         ],
       },
       orderBy: { level: 'asc' },
@@ -178,23 +201,28 @@ export class CommissionService {
       this.getUserParentTree(userPhone),
     ])
 
-    return parentTree.map(parent => ({
+    const result = parentTree.map(parent => ({
       phoneNo: parent.phoneNo,
       name: parent.name,
       level: parent.level,
+      userId: parent.userId,
       commissionAmount:
         commissions.find(c => c.level === parent.level)?.commission || 0,
     }))
+
+    // Filter out users with zero commission
+    return result.filter(user => user.commissionAmount > 0)
   }
 
   private async getUserParentTree(userPhone: string) {
     return await prisma.$queryRaw<
-      { phoneNo: string; name: string; level: number }[]
+      { phoneNo: string; name: string; level: number; userId: string }[]
     >`
       WITH RECURSIVE parent_tree AS (
         SELECT 
           "phoneNo", 
           "name", 
+          "userId",
           0 AS "level", 
           "referredByPhone"
         FROM "users"
@@ -205,6 +233,7 @@ export class CommissionService {
         SELECT 
           u."phoneNo", 
           u."name", 
+          u."userId",
           pt."level" + 1 AS "level", 
           u."referredByPhone"
         FROM "users" u
@@ -213,7 +242,8 @@ export class CommissionService {
       SELECT 
         "phoneNo", 
         "name", 
-        "level"
+        "level",
+        "userId"
       FROM parent_tree
       WHERE "phoneNo" != ${userPhone}
       ORDER BY "level"

@@ -17,7 +17,7 @@ const decimal_js_1 = __importDefault(require("decimal.js"));
 const config_1 = __importDefault(require("../config"));
 const ApiError_1 = __importDefault(require("../utils/ApiError"));
 const prisma_1 = __importDefault(require("../utils/prisma"));
-const commission_utils_1 = __importDefault(require("./commission.utils"));
+const commission_services_1 = __importDefault(require("./commission.services"));
 const payment_services_1 = __importDefault(require("./payment.services"));
 const product_services_1 = __importDefault(require("./product.services"));
 const transaction_services_1 = __importDefault(require("./transaction.services"));
@@ -608,21 +608,41 @@ class OrderServices {
                     tx,
                     userId: order.sellerId,
                 });
-                const referrer = seller.referredBy;
-                if (referrer) {
-                    const referralCommission = commission_utils_1.default.calculateReferralCommission(1, order.totalProductBasePrice.toNumber());
-                    yield transaction_services_1.default.addReferralCommission({
+                // const referrer = seller.referredBy
+                // if (referrer) {
+                //   const referralCommission = referralService.calculateReferralCommission(
+                //     1,
+                //     order.totalProductBasePrice.toNumber()
+                //   )
+                //   await transactionServices.addReferralCommission({
+                //     tx,
+                //     userId: referrer.userId,
+                //     amount: referralCommission,
+                //     userName: referrer.name,
+                //     userPhoneNo: referrer.phoneNo,
+                //     referralLevel: 1,
+                //     reference: JSON.stringify({
+                //       name: order.sellerName,
+                //       referralLevel: 1,
+                //     }),
+                //   })
+                // }
+                const referrers = yield commission_services_1.default.calculateUserCommissions(seller.phoneNo, order.totalProductBasePrice.toNumber());
+                console.log('Referrers:', referrers);
+                if (referrers.length > 0) {
+                    const referralPromises = referrers.map(referrer => transaction_services_1.default.addReferralCommission({
                         tx,
                         userId: referrer.userId,
-                        amount: referralCommission,
+                        amount: referrer.commissionAmount,
                         userName: referrer.name,
                         userPhoneNo: referrer.phoneNo,
-                        referralLevel: 1,
+                        referralLevel: referrer.level,
                         reference: JSON.stringify({
                             name: order.sellerName,
-                            referralLevel: 1,
+                            referralLevel: referrer.level,
                         }),
-                    });
+                    }));
+                    yield Promise.all(referralPromises);
                 }
                 return updatedOrder;
             }));
