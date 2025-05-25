@@ -14,6 +14,5 @@ commissionRoutes.put('/', commission_controller_1.default.replaceCommissionTable
 commissionRoutes.get('/', commission_controller_1.default.getCommissionTable);
 sellerCommissionRoutes.get('/', commission_controller_1.default.getCommissionTable);
 // Commission Calculations
-commissionRoutes.post('/calculations', commission_controller_1.default.calculateUserCommissions);
 commissionRoutes.get('/calculations/:price', commission_controller_1.default.getCommissionsForPrice);
 exports.default = commissionRoutes;

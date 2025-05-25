@@ -191,7 +191,11 @@ export class CommissionService {
     }))
   }
 
-  async calculateUserCommissions(userPhone: string, price: number) {
+  async calculateUserCommissions(
+    userPhone: string,
+    price: number,
+    tx: Prisma.TransactionClient
+  ) {
     if (price <= 0) {
       throw new ApiError(400, 'মূল্য অবশ্যই ধনাত্মক হতে হবে')
     }

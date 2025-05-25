@@ -80,36 +80,6 @@ class CommissionController {
   /**
    * Calculate commissions for a user's purchase
    */
-  async calculateUserCommissions(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) {
-    try {
-      const { phoneNo, price } = req.body
-
-      if (!phoneNo || !price) {
-        throw new ApiError(400, 'ফোন নম্বর এবং মূল্য উভয়ই প্রয়োজন')
-      }
-
-      const numericPrice = parseFloat(price)
-      if (isNaN(numericPrice)) {
-        throw new ApiError(400, 'মূল্য একটি বৈধ সংখ্যা হতে হবে')
-      }
-
-      const commissionDistribution =
-        await commissionService.calculateUserCommissions(phoneNo, numericPrice)
-
-      res.status(200).json({
-        success: true,
-        statusCode: 200,
-        message: 'কমিশন হিসাব সফলভাবে সম্পন্ন হয়েছে',
-        data: commissionDistribution,
-      })
-    } catch (error) {
-      next(error)
-    }
-  }
 }
 
 export default new CommissionController()

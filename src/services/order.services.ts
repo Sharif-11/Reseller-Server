@@ -753,9 +753,10 @@ class OrderServices {
       // }
       const referrers = await commissionServices.calculateUserCommissions(
         seller.phoneNo,
-        order.totalProductBasePrice.toNumber()
+        order.totalProductBasePrice.toNumber(),
+        tx
       )
-      console.log('Referrers:', referrers)
+      // console.log('Referrers:', referrers)
       if (referrers.length > 0) {
         const referralPromises = referrers.map(referrer =>
           transactionServices.addReferralCommission({

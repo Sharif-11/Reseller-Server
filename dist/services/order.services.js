@@ -629,8 +629,8 @@ class OrderServices {
                 //     }),
                 //   })
                 // }
-                const referrers = yield commission_services_1.default.calculateUserCommissions(seller.phoneNo, order.totalProductBasePrice.toNumber());
-                console.log('Referrers:', referrers);
+                const referrers = yield commission_services_1.default.calculateUserCommissions(seller.phoneNo, order.totalProductBasePrice.toNumber(), tx);
+                // console.log('Referrers:', referrers)
                 if (referrers.length > 0) {
                     const referralPromises = referrers.map(referrer => transaction_services_1.default.addReferralCommission({
                         tx,

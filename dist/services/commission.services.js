@@ -140,7 +140,7 @@ class CommissionService {
             }));
         });
     }
-    calculateUserCommissions(userPhone, price) {
+    calculateUserCommissions(userPhone, price, tx) {
         return __awaiter(this, void 0, void 0, function* () {
             if (price <= 0) {
                 throw new ApiError_1.default(400, 'মূল্য অবশ্যই ধনাত্মক হতে হবে');

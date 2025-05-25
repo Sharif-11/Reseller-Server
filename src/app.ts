@@ -22,7 +22,7 @@ const corsOptions = {
 app.use(cors(corsOptions))
 app.use('/api/v1', globalRoutes)
 //health check
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
   res.status(200).json({
     statusCode: 200,
     success: true,

@@ -11,10 +11,6 @@ commissionRoutes.get('/', commissionController.getCommissionTable)
 sellerCommissionRoutes.get('/', commissionController.getCommissionTable)
 
 // Commission Calculations
-commissionRoutes.post(
-  '/calculations',
-  commissionController.calculateUserCommissions
-)
 
 commissionRoutes.get(
   '/calculations/:price',

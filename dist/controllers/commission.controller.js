@@ -80,32 +80,5 @@ class CommissionController {
             }
         });
     }
-    /**
-     * Calculate commissions for a user's purchase
-     */
-    calculateUserCommissions(req, res, next) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                const { phoneNo, price } = req.body;
-                if (!phoneNo || !price) {
-                    throw new ApiError_1.default(400, 'ফোন নম্বর এবং মূল্য উভয়ই প্রয়োজন');
-                }
-                const numericPrice = parseFloat(price);
-                if (isNaN(numericPrice)) {
-                    throw new ApiError_1.default(400, 'মূল্য একটি বৈধ সংখ্যা হতে হবে');
-                }
-                const commissionDistribution = yield commission_services_1.default.calculateUserCommissions(phoneNo, numericPrice);
-                res.status(200).json({
-                    success: true,
-                    statusCode: 200,
-                    message: 'কমিশন হিসাব সফলভাবে সম্পন্ন হয়েছে',
-                    data: commissionDistribution,
-                });
-            }
-            catch (error) {
-                next(error);
-            }
-        });
-    }
 }
 exports.default = new CommissionController();
