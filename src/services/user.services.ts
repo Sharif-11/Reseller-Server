@@ -378,14 +378,15 @@ class UserServices {
    * @returns The list of users that match the filters
    */
   async getAllUsers(
-    filters: { phoneNo?: string; name?: string } = {},
+    phoneNo?: string,
+    name?: string,
     page?: number,
     pageSize?: number
   ): Promise<User[]> {
     const query: Prisma.UserFindManyArgs = {
       where: {
-        phoneNo: filters.phoneNo ? { contains: filters.phoneNo } : undefined,
-        name: filters.name ? { contains: filters.name } : undefined,
+        phoneNo: phoneNo ? { contains: phoneNo } : undefined,
+        name: name ? { contains: name } : undefined,
       },
       select: {
         userId: true,

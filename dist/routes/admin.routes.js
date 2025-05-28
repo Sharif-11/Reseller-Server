@@ -27,4 +27,5 @@ adminRouter.use('/commissions', commissions_routes_1.default);
 adminRouter.use('/payments', payment_routes_1.adminPaymentRoutes);
 adminRouter.patch('/unlock-user', auth_controllers_1.default.unlockUser);
 adminRouter.get('/dashboard', order_controllers_1.default.getAdminStats);
+adminRouter.get('/users', auth_controllers_1.default.getAllSellers);
 exports.default = adminRouter;

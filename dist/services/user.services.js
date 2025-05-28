@@ -330,12 +330,12 @@ class UserServices {
      * @param pageSize - The number of users per page (optional)
      * @returns The list of users that match the filters
      */
-    getAllUsers() {
-        return __awaiter(this, arguments, void 0, function* (filters = {}, page, pageSize) {
+    getAllUsers(phoneNo, name, page, pageSize) {
+        return __awaiter(this, void 0, void 0, function* () {
             const query = {
                 where: {
-                    phoneNo: filters.phoneNo ? { contains: filters.phoneNo } : undefined,
-                    name: filters.name ? { contains: filters.name } : undefined,
+                    phoneNo: phoneNo ? { contains: phoneNo } : undefined,
+                    name: name ? { contains: name } : undefined,
                 },
                 select: {
                     userId: true,

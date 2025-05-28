@@ -289,6 +289,25 @@ class AuthController {
       next(error)
     }
   }
+  async getAllSellers(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { page = 1, pageSize = 10, phoneNo, name } = req.query
+      const sellers = await userServices.getAllUsers(
+        phoneNo ? String(phoneNo) : undefined,
+        name ? String(name) : undefined,
+        Number(page),
+        Number(pageSize)
+      )
+      res.status(200).json({
+        statusCode: 200,
+        message: 'সব সেলার সফলভাবে পাওয়া গেছে',
+        success: true,
+        data: sellers,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
 }
 
 export default new AuthController()

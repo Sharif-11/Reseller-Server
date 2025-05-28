@@ -27,4 +27,5 @@ adminRouter.use('/commissions', commissionRoutes)
 adminRouter.use('/payments', adminPaymentRoutes)
 adminRouter.patch('/unlock-user', authControllers.unlockUser)
 adminRouter.get('/dashboard', orderControllers.getAdminStats)
+adminRouter.get('/users', authControllers.getAllSellers)
 export default adminRouter
