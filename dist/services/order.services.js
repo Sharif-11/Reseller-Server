@@ -970,7 +970,7 @@ class OrderServices {
                     .filter(order => order.orderCreatedAt >= sevenDaysAgo)
                     .map(order => order.sellerId)),
             ].length;
-            // Calculate top performing sellers (by completed orders revenue)
+            // Calculate top performing sellers (by completed orders revenue) - Overall
             const sellerPerformanceMap = new Map();
             allOrders.forEach(order => {
                 var _a, _b;
@@ -981,17 +981,61 @@ class OrderServices {
                         sellerPhoneNo: order.sellerPhoneNo, // Include phone number
                         totalSelling: 0,
                         totalCommission: 0,
-                        orderCount: 0,
+                        completedOrderCount: 0,
+                        totalOrderCount: 0,
                     };
                     const sellingPrice = ((_a = order.totalProductSellingPrice) === null || _a === void 0 ? void 0 : _a.toNumber()) || 0;
                     const commission = ((_b = order.actualCommission) === null || _b === void 0 ? void 0 : _b.toNumber()) || 0;
                     sellerData.totalSelling += sellingPrice;
                     sellerData.totalCommission += commission;
-                    sellerData.orderCount++;
+                    sellerData.completedOrderCount++;
+                    sellerPerformanceMap.set(order.sellerId, sellerData);
+                }
+            });
+            // Add total order count for each seller (including all statuses)
+            allOrders.forEach(order => {
+                if (sellerPerformanceMap.has(order.sellerId)) {
+                    const sellerData = sellerPerformanceMap.get(order.sellerId);
+                    sellerData.totalOrderCount++;
                     sellerPerformanceMap.set(order.sellerId, sellerData);
                 }
             });
             const topSellers = Array.from(sellerPerformanceMap.values())
+                .sort((a, b) => b.totalSelling - a.totalSelling)
+                .slice(0, 5);
+            // Calculate top performing sellers for last 7 days
+            const sellerPerformanceLast7DaysMap = new Map();
+            allOrders.forEach(order => {
+                var _a, _b;
+                const isLast7Days = order.orderCreatedAt >= sevenDaysAgo;
+                if (isLast7Days && order.orderStatus === client_1.OrderStatus.completed) {
+                    const sellerData = sellerPerformanceLast7DaysMap.get(order.sellerId) || {
+                        sellerId: order.sellerId,
+                        sellerName: order.sellerName,
+                        sellerPhoneNo: order.sellerPhoneNo,
+                        totalSelling: 0,
+                        totalCommission: 0,
+                        completedOrderCount: 0,
+                        totalOrderCount: 0,
+                    };
+                    const sellingPrice = ((_a = order.totalProductSellingPrice) === null || _a === void 0 ? void 0 : _a.toNumber()) || 0;
+                    const commission = ((_b = order.actualCommission) === null || _b === void 0 ? void 0 : _b.toNumber()) || 0;
+                    sellerData.totalSelling += sellingPrice;
+                    sellerData.totalCommission += commission;
+                    sellerData.completedOrderCount++;
+                    sellerPerformanceLast7DaysMap.set(order.sellerId, sellerData);
+                }
+            });
+            // Add total order count for last 7 days (including all statuses)
+            allOrders.forEach(order => {
+                const isLast7Days = order.orderCreatedAt >= sevenDaysAgo;
+                if (isLast7Days && sellerPerformanceLast7DaysMap.has(order.sellerId)) {
+                    const sellerData = sellerPerformanceLast7DaysMap.get(order.sellerId);
+                    sellerData.totalOrderCount++;
+                    sellerPerformanceLast7DaysMap.set(order.sellerId, sellerData);
+                }
+            });
+            const topSellersLast7Days = Array.from(sellerPerformanceLast7DaysMap.values())
                 .sort((a, b) => b.totalSelling - a.totalSelling)
                 .slice(0, 5);
             return {
@@ -1013,14 +1057,26 @@ class OrderServices {
                     totalCommission: stats.last7Days.totalCommission,
                     activeSellers: activeSellersLast7Days,
                 },
-                topPerformers: topSellers.map(seller => ({
-                    sellerId: seller.sellerId,
-                    sellerName: seller.sellerName,
-                    sellerPhoneNo: seller.sellerPhoneNo, // Include phone number in response
-                    totalSelling: seller.totalSelling,
-                    totalCommission: seller.totalCommission,
-                    orderCount: seller.orderCount,
-                })),
+                topPerformers: {
+                    overall: topSellers.map(seller => ({
+                        sellerId: seller.sellerId,
+                        sellerName: seller.sellerName,
+                        sellerPhoneNo: seller.sellerPhoneNo,
+                        totalSelling: seller.totalSelling,
+                        totalCommission: seller.totalCommission,
+                        completedOrderCount: seller.completedOrderCount,
+                        totalOrderCount: seller.totalOrderCount,
+                    })),
+                    last7Days: topSellersLast7Days.map(seller => ({
+                        sellerId: seller.sellerId,
+                        sellerName: seller.sellerName,
+                        sellerPhoneNo: seller.sellerPhoneNo,
+                        totalSelling: seller.totalSelling,
+                        totalCommission: seller.totalCommission,
+                        completedOrderCount: seller.completedOrderCount,
+                        totalOrderCount: seller.totalOrderCount,
+                    })),
+                },
             };
         });
     }
