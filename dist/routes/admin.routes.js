@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_controllers_1 = __importDefault(require("../controllers/auth.controllers"));
+const order_controllers_1 = __importDefault(require("../controllers/order.controllers"));
 const transaction_controller_1 = __importDefault(require("../controllers/transaction.controller"));
 const auth_middlewares_1 = require("../middlewares/auth.middlewares");
 const adminOrders_routes_1 = __importDefault(require("./adminOrders.routes"));
@@ -25,4 +26,5 @@ adminRouter.get('/transactions', transaction_controller_1.default.getAllTransact
 adminRouter.use('/commissions', commissions_routes_1.default);
 adminRouter.use('/payments', payment_routes_1.adminPaymentRoutes);
 adminRouter.patch('/unlock-user', auth_controllers_1.default.unlockUser);
+adminRouter.get('/dashboard', order_controllers_1.default.getAdminStats);
 exports.default = adminRouter;

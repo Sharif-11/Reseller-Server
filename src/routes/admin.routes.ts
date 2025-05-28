@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import authControllers from '../controllers/auth.controllers'
+import orderControllers from '../controllers/order.controllers'
 import transactionController from '../controllers/transaction.controller'
 import { isAuthenticated, verifyAdmin } from '../middlewares/auth.middlewares'
 import adminOrdersRoutes from './adminOrders.routes'
@@ -22,6 +23,8 @@ adminRouter.get(
   transactionController.getAllTransactionForAdmin
 )
 adminRouter.use('/commissions', commissionRoutes)
+
 adminRouter.use('/payments', adminPaymentRoutes)
 adminRouter.patch('/unlock-user', authControllers.unlockUser)
+adminRouter.get('/dashboard', orderControllers.getAdminStats)
 export default adminRouter

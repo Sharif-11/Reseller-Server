@@ -282,5 +282,18 @@ class OrderController {
       next(error)
     }
   }
+  async getAdminStats(req: Request, res: Response, next: NextFunction) {
+    try {
+      const stats = await OrderServices.getAdminDashboardStats()
+      res.status(200).json({
+        statusCode: 200,
+        message: 'অ্যাডমিন পরিসংখ্যান সফলভাবে পাওয়া গেছে',
+        success: true,
+        data: stats,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
 }
 export default new OrderController()

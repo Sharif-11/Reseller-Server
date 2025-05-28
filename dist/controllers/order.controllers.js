@@ -313,5 +313,21 @@ class OrderController {
             }
         });
     }
+    getAdminStats(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const stats = yield order_services_1.default.getAdminDashboardStats();
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'অ্যাডমিন পরিসংখ্যান সফলভাবে পাওয়া গেছে',
+                    success: true,
+                    data: stats,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
 }
 exports.default = new OrderController();

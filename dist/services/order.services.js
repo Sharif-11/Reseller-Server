@@ -893,5 +893,136 @@ class OrderServices {
             };
         });
     }
+    getAdminDashboardStats() {
+        return __awaiter(this, void 0, void 0, function* () {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            // Single query to get all orders with necessary data including seller phone number
+            const allOrders = yield prisma_1.default.order.findMany({
+                select: {
+                    orderStatus: true,
+                    orderCreatedAt: true,
+                    totalProductSellingPrice: true,
+                    actualCommission: true,
+                    sellerId: true,
+                    sellerName: true,
+                    sellerPhoneNo: true, // Added seller phone number
+                },
+            });
+            // Process data in memory for main stats
+            const stats = allOrders.reduce((acc, order) => {
+                var _a, _b;
+                const isLast7Days = order.orderCreatedAt >= sevenDaysAgo;
+                const sellingPrice = ((_a = order.totalProductSellingPrice) === null || _a === void 0 ? void 0 : _a.toNumber()) || 0;
+                const commission = ((_b = order.actualCommission) === null || _b === void 0 ? void 0 : _b.toNumber()) || 0;
+                // Overall counts
+                acc.overall.total++;
+                if (order.orderStatus === client_1.OrderStatus.completed) {
+                    acc.overall.completed++;
+                    acc.overall.totalSelling += sellingPrice;
+                    acc.overall.totalCommission += commission;
+                }
+                else if (order.orderStatus === client_1.OrderStatus.returned) {
+                    acc.overall.returned++;
+                }
+                else {
+                    acc.overall.others++;
+                }
+                // Last 7 days counts
+                if (isLast7Days) {
+                    acc.last7Days.total++;
+                    if (order.orderStatus === client_1.OrderStatus.completed) {
+                        acc.last7Days.completed++;
+                        acc.last7Days.totalSelling += sellingPrice;
+                        acc.last7Days.totalCommission += commission;
+                    }
+                    else if (order.orderStatus === client_1.OrderStatus.returned) {
+                        acc.last7Days.returned++;
+                    }
+                    else {
+                        acc.last7Days.others++;
+                    }
+                }
+                return acc;
+            }, {
+                overall: {
+                    total: 0,
+                    completed: 0,
+                    returned: 0,
+                    others: 0,
+                    totalSelling: 0,
+                    totalCommission: 0,
+                },
+                last7Days: {
+                    total: 0,
+                    completed: 0,
+                    returned: 0,
+                    others: 0,
+                    totalSelling: 0,
+                    totalCommission: 0,
+                },
+            });
+            // Calculate additional metrics
+            const uniqueSellerIds = [...new Set(allOrders.map(order => order.sellerId))];
+            const totalSellers = uniqueSellerIds.length;
+            const activeSellersLast7Days = [
+                ...new Set(allOrders
+                    .filter(order => order.orderCreatedAt >= sevenDaysAgo)
+                    .map(order => order.sellerId)),
+            ].length;
+            // Calculate top performing sellers (by completed orders revenue)
+            const sellerPerformanceMap = new Map();
+            allOrders.forEach(order => {
+                var _a, _b;
+                if (order.orderStatus === client_1.OrderStatus.completed) {
+                    const sellerData = sellerPerformanceMap.get(order.sellerId) || {
+                        sellerId: order.sellerId,
+                        sellerName: order.sellerName,
+                        sellerPhoneNo: order.sellerPhoneNo, // Include phone number
+                        totalSelling: 0,
+                        totalCommission: 0,
+                        orderCount: 0,
+                    };
+                    const sellingPrice = ((_a = order.totalProductSellingPrice) === null || _a === void 0 ? void 0 : _a.toNumber()) || 0;
+                    const commission = ((_b = order.actualCommission) === null || _b === void 0 ? void 0 : _b.toNumber()) || 0;
+                    sellerData.totalSelling += sellingPrice;
+                    sellerData.totalCommission += commission;
+                    sellerData.orderCount++;
+                    sellerPerformanceMap.set(order.sellerId, sellerData);
+                }
+            });
+            const topSellers = Array.from(sellerPerformanceMap.values())
+                .sort((a, b) => b.totalSelling - a.totalSelling)
+                .slice(0, 5);
+            return {
+                overall: {
+                    totalOrders: stats.overall.total,
+                    completedOrders: stats.overall.completed,
+                    returnedOrders: stats.overall.returned,
+                    otherOrders: stats.overall.others,
+                    totalSelling: stats.overall.totalSelling,
+                    totalCommission: stats.overall.totalCommission,
+                    totalSellers,
+                },
+                last7Days: {
+                    totalOrders: stats.last7Days.total,
+                    completedOrders: stats.last7Days.completed,
+                    returnedOrders: stats.last7Days.returned,
+                    otherOrders: stats.last7Days.others,
+                    totalSelling: stats.last7Days.totalSelling,
+                    totalCommission: stats.last7Days.totalCommission,
+                    activeSellers: activeSellersLast7Days,
+                },
+                topPerformers: topSellers.map(seller => ({
+                    sellerId: seller.sellerId,
+                    sellerName: seller.sellerName,
+                    sellerPhoneNo: seller.sellerPhoneNo, // Include phone number in response
+                    totalSelling: seller.totalSelling,
+                    totalCommission: seller.totalCommission,
+                    orderCount: seller.orderCount,
+                })),
+            };
+        });
+    }
 }
 exports.default = new OrderServices();
