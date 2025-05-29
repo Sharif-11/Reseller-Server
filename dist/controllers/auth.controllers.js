@@ -325,7 +325,7 @@ class AuthController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const { page = 1, pageSize = 10, phoneNo, name } = req.query;
-                const sellers = yield user_services_1.default.getAllUsers(phoneNo ? String(phoneNo) : undefined, name ? String(name) : undefined, Number(page), Number(pageSize));
+                const sellers = yield user_services_1.default.getAllSellers(phoneNo ? String(phoneNo) : undefined, name ? String(name) : undefined, Number(page), Number(pageSize));
                 res.status(200).json({
                     statusCode: 200,
                     message: 'সব সেলার সফলভাবে পাওয়া গেছে',

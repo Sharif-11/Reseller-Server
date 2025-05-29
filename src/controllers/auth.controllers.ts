@@ -292,7 +292,7 @@ class AuthController {
   async getAllSellers(req: Request, res: Response, next: NextFunction) {
     try {
       const { page = 1, pageSize = 10, phoneNo, name } = req.query
-      const sellers = await userServices.getAllUsers(
+      const sellers = await userServices.getAllSellers(
         phoneNo ? String(phoneNo) : undefined,
         name ? String(name) : undefined,
         Number(page),

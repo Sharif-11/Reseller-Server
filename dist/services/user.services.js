@@ -330,12 +330,13 @@ class UserServices {
      * @param pageSize - The number of users per page (optional)
      * @returns The list of users that match the filters
      */
-    getAllUsers(phoneNo, name, page, pageSize) {
+    getAllSellers(phoneNo, name, page, pageSize) {
         return __awaiter(this, void 0, void 0, function* () {
             const query = {
                 where: {
                     phoneNo: phoneNo ? { contains: phoneNo } : undefined,
                     name: name ? { contains: name } : undefined,
+                    role: 'Seller',
                 },
                 select: {
                     userId: true,
@@ -361,7 +362,20 @@ class UserServices {
                 query['take'] = pageSize;
             }
             const users = yield prisma_1.default.user.findMany(query);
-            return users;
+            // we need to calculate total Page also
+            const totalUsers = yield prisma_1.default.user.count({
+                where: {
+                    phoneNo: phoneNo ? { contains: phoneNo } : undefined,
+                    name: name ? { contains: name } : undefined,
+                    role: 'Seller',
+                },
+            });
+            const totalPages = Math.ceil(totalUsers / (pageSize || 10));
+            return {
+                users,
+                totalUsers,
+                totalPages,
+            };
         });
     }
     // unlock user

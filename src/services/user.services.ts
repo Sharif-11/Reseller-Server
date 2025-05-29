@@ -377,16 +377,17 @@ class UserServices {
    * @param pageSize - The number of users per page (optional)
    * @returns The list of users that match the filters
    */
-  async getAllUsers(
+  async getAllSellers(
     phoneNo?: string,
     name?: string,
     page?: number,
     pageSize?: number
-  ): Promise<User[]> {
+  ) {
     const query: Prisma.UserFindManyArgs = {
       where: {
         phoneNo: phoneNo ? { contains: phoneNo } : undefined,
         name: name ? { contains: name } : undefined,
+        role: 'Seller',
       },
       select: {
         userId: true,
@@ -415,7 +416,21 @@ class UserServices {
 
     const users = await prisma.user.findMany(query)
 
-    return users
+    // we need to calculate total Page also
+    const totalUsers = await prisma.user.count({
+      where: {
+        phoneNo: phoneNo ? { contains: phoneNo } : undefined,
+        name: name ? { contains: name } : undefined,
+        role: 'Seller',
+      },
+    })
+    const totalPages = Math.ceil(totalUsers / (pageSize || 10))
+
+    return {
+      users,
+      totalUsers,
+      totalPages,
+    }
   }
   // unlock user
   async unlockUser(phoneNo: string) {
