@@ -647,7 +647,11 @@ class OrderServices {
                     yield Promise.all(referralPromises);
                 }
                 return updatedOrder;
-            }));
+            }), {
+                maxWait: 20000, // 10 seconds max wait
+                timeout: 60000,
+                isolationLevel: 'Serializable',
+            });
             return updatedOrder;
         });
     }

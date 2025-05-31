@@ -687,96 +687,103 @@ class OrderServices {
     }
     const actualCommission =
       amountPaidByCustomer - order.totalProductBasePrice.toNumber()
-    const updatedOrder = await prisma.$transaction(async tx => {
-      const updatedOrder = await tx.order.update({
-        where: { orderId },
-        data: {
-          orderStatus: OrderStatus.completed,
-          totalAmountPaidByCustomer: amountPaidByCustomer,
-          actualCommission,
-        },
-      })
-      // count how many order are completed
-      const completedOrdersCount = await tx.order.count({
-        where: {
-          orderStatus: OrderStatus.completed,
-          sellerId: order.sellerId,
-        },
-      })
-      // verify the seller
-      const isVerified =
-        completedOrdersCount >= config.minimumOrderCompletedToBeVerified
-          ? true
-          : false
-      await tx.user.update({
-        where: { userId: order.sellerId },
-        data: { isVerified },
-      })
+    const updatedOrder = await prisma.$transaction(
+      async tx => {
+        const updatedOrder = await tx.order.update({
+          where: { orderId },
+          data: {
+            orderStatus: OrderStatus.completed,
+            totalAmountPaidByCustomer: amountPaidByCustomer,
+            actualCommission,
+          },
+        })
+        // count how many order are completed
+        const completedOrdersCount = await tx.order.count({
+          where: {
+            orderStatus: OrderStatus.completed,
+            sellerId: order.sellerId,
+          },
+        })
+        // verify the seller
+        const isVerified =
+          completedOrdersCount >= config.minimumOrderCompletedToBeVerified
+            ? true
+            : false
+        await tx.user.update({
+          where: { userId: order.sellerId },
+          data: { isVerified },
+        })
 
-      await transactionServices.addSellerCommission({
-        tx,
-        userId: order.sellerId,
-        amount: actualCommission,
-        userName: order.sellerName,
-        userPhoneNo: order.sellerPhoneNo,
-      })
-      // await transactionServices.returnDeliveryChargeAfterOrderCompletion({
-      //   tx,
-      //   amount: order.deliveryCharge.toNumber(),
-      //   userName: order.sellerName,
-      //   userPhoneNo: order.sellerPhoneNo,
-      //   userId: order.sellerId,
-      // })
-      // find the seller referrer and add referral commission if exists
-      const seller = await userServices.getUserDetailByUserId({
-        tx,
-        userId: order.sellerId,
-      })
-      // const referrer = seller.referredBy
-      // if (referrer) {
-      //   const referralCommission = referralService.calculateReferralCommission(
-      //     1,
-      //     order.totalProductBasePrice.toNumber()
-      //   )
-      //   await transactionServices.addReferralCommission({
-      //     tx,
-      //     userId: referrer.userId,
-      //     amount: referralCommission,
-      //     userName: referrer.name,
-      //     userPhoneNo: referrer.phoneNo,
-      //     referralLevel: 1,
-      //     reference: JSON.stringify({
-      //       name: order.sellerName,
-      //       referralLevel: 1,
-      //     }),
-      //   })
-      // }
-      const referrers = await commissionServices.calculateUserCommissions(
-        seller.phoneNo,
-        order.totalProductBasePrice.toNumber(),
-        tx
-      )
-      // console.log('Referrers:', referrers)
-      if (referrers.length > 0) {
-        const referralPromises = referrers.map(referrer =>
-          transactionServices.addReferralCommission({
-            tx,
-            userId: referrer.userId,
-            amount: referrer.commissionAmount,
-            userName: referrer.name,
-            userPhoneNo: referrer.phoneNo,
-            referralLevel: referrer.level,
-            reference: JSON.stringify({
-              name: order.sellerName,
-              referralLevel: referrer.level,
-            }),
-          })
+        await transactionServices.addSellerCommission({
+          tx,
+          userId: order.sellerId,
+          amount: actualCommission,
+          userName: order.sellerName,
+          userPhoneNo: order.sellerPhoneNo,
+        })
+        // await transactionServices.returnDeliveryChargeAfterOrderCompletion({
+        //   tx,
+        //   amount: order.deliveryCharge.toNumber(),
+        //   userName: order.sellerName,
+        //   userPhoneNo: order.sellerPhoneNo,
+        //   userId: order.sellerId,
+        // })
+        // find the seller referrer and add referral commission if exists
+        const seller = await userServices.getUserDetailByUserId({
+          tx,
+          userId: order.sellerId,
+        })
+        // const referrer = seller.referredBy
+        // if (referrer) {
+        //   const referralCommission = referralService.calculateReferralCommission(
+        //     1,
+        //     order.totalProductBasePrice.toNumber()
+        //   )
+        //   await transactionServices.addReferralCommission({
+        //     tx,
+        //     userId: referrer.userId,
+        //     amount: referralCommission,
+        //     userName: referrer.name,
+        //     userPhoneNo: referrer.phoneNo,
+        //     referralLevel: 1,
+        //     reference: JSON.stringify({
+        //       name: order.sellerName,
+        //       referralLevel: 1,
+        //     }),
+        //   })
+        // }
+        const referrers = await commissionServices.calculateUserCommissions(
+          seller.phoneNo,
+          order.totalProductBasePrice.toNumber(),
+          tx
         )
-        await Promise.all(referralPromises)
-      }
+        // console.log('Referrers:', referrers)
+        if (referrers.length > 0) {
+          const referralPromises = referrers.map(referrer =>
+            transactionServices.addReferralCommission({
+              tx,
+              userId: referrer.userId,
+              amount: referrer.commissionAmount,
+              userName: referrer.name,
+              userPhoneNo: referrer.phoneNo,
+              referralLevel: referrer.level,
+              reference: JSON.stringify({
+                name: order.sellerName,
+                referralLevel: referrer.level,
+              }),
+            })
+          )
+          await Promise.all(referralPromises)
+        }
 
-      return updatedOrder
-    })
+        return updatedOrder
+      },
+      {
+        maxWait: 20000, // 10 seconds max wait
+        timeout: 60000,
+        isolationLevel: 'Serializable',
+      }
+    )
     return updatedOrder
   }
 
