@@ -39,7 +39,13 @@ class OtpServices {
                 const timeSinceLastOtp = Date.now() - contact.otpCreatedAt.getTime();
                 if (timeSinceLastOtp < config_1.default.otpExpiresIn) {
                     const timeLeft = Math.ceil((config_1.default.otpExpiresIn - timeSinceLastOtp) / 1000);
-                    throw new ApiError_1.default(429, `ইতিমধ্যে একটি ওটিপি পাঠানো হয়েছে। অনুগ্রহ করে ${timeLeft} সেকেন্ড পরে আবার চেষ্টা করুন।`);
+                    return {
+                        sendOTP: false,
+                        alreadySent: true,
+                        isBlocked: false,
+                        isVerified: false,
+                        message: `ইতিমধ্যে একটি ওটিপি পাঠানো হয়েছে। অনুগ্রহ করে ${timeLeft} সেকেন্ড পরে আবার চেষ্টা করুন।`,
+                    };
                 }
             }
             if (!contact) {

@@ -32,10 +32,13 @@ class OtpServices {
         const timeLeft = Math.ceil(
           (config.otpExpiresIn - timeSinceLastOtp) / 1000
         )
-        throw new ApiError(
-          429,
-          `ইতিমধ্যে একটি ওটিপি পাঠানো হয়েছে। অনুগ্রহ করে ${timeLeft} সেকেন্ড পরে আবার চেষ্টা করুন।`
-        )
+        return {
+          sendOTP: false,
+          alreadySent: true,
+          isBlocked: false,
+          isVerified: false,
+          message: `ইতিমধ্যে একটি ওটিপি পাঠানো হয়েছে। অনুগ্রহ করে ${timeLeft} সেকেন্ড পরে আবার চেষ্টা করুন।`,
+        }
       }
     }
 
