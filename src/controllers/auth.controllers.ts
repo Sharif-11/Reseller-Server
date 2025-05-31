@@ -266,7 +266,11 @@ class AuthController {
       const data = await AuthServices.forgotPassword(phoneNo)
       res.status(200).json({
         statusCode: 200,
-        message: 'নতুন পাসওয়ার্ড আপনার মোবাইল নম্বরে পাঠানো হয়েছে',
+        message: data.sendPassword
+          ? 'নতুন পাসওয়ার্ড আপনার মোবাইল নম্বরে পাঠানো হয়েছে'
+          : 'message' in data
+          ? data.message
+          : 'পাসওয়ার্ড রিসেট অনুরোধ সফল',
         success: true,
         data,
       })

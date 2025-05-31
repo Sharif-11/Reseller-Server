@@ -286,7 +286,10 @@ class UserServices {
                     const timeLeft = Math.ceil((config_1.default.forgotPasswordRequestInterval - timeSinceLastRequest) /
                         1000 /
                         60); // Convert to minutes
-                    throw new ApiError_1.default(429, `পাসওয়ার্ড ইতিমধ্যেই পাঠানো হয়েছে। অনুগ্রহ করে ${timeLeft} মিনিট পরে আবার চেষ্টা করুন।`);
+                    return {
+                        sendPassword: false,
+                        message: `পাসওয়ার্ড ইতিমধ্যে প্রেরণ করা হয়েছে। অনুগ্রহ করে এটি ব্যবহার করে লগইন করুন। ${timeLeft} মিনিট পরে আবার চেষ্টা করতে পারবেন।`,
+                    };
                 }
             }
             // Use transaction for atomic operations
