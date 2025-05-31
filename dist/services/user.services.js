@@ -410,6 +410,8 @@ class UserServices {
                 },
                 select: {
                     userId: true,
+                    phoneNo: true,
+                    name: true,
                 },
             });
             return admins;

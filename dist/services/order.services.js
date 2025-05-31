@@ -20,6 +20,7 @@ const prisma_1 = __importDefault(require("../utils/prisma"));
 const commission_services_1 = __importDefault(require("./commission.services"));
 const payment_services_1 = __importDefault(require("./payment.services"));
 const product_services_1 = __importDefault(require("./product.services"));
+const sms_services_1 = __importDefault(require("./sms.services"));
 const transaction_services_1 = __importDefault(require("./transaction.services"));
 const user_services_1 = __importDefault(require("./user.services"));
 const wallet_services_1 = __importDefault(require("./wallet.services"));
@@ -239,6 +240,17 @@ class OrderServices {
                             remarks: 'অর্ডার ভেরিফিকেশনের জন্য ডেলিভারি চার্জ কাটা হয়েছে',
                         });
                     }
+                    // Find admin
+                    const admin = yield user_services_1.default.getAdminForTheUsers();
+                    yield sms_services_1.default.sendOrderNotificationToAdmin({
+                        mobileNo: admin.phoneNo,
+                        orderId: createdOrder.orderId,
+                        sellerName: createdOrder.sellerName,
+                        sellerPhoneNo: createdOrder.sellerPhoneNo,
+                        customerName: createdOrder.customerName,
+                        customerPhoneNo: createdOrder.customerPhoneNo,
+                        deliveryAddress: createdOrder.deliveryAddress,
+                    });
                     return createdOrder;
                 }));
                 return order;

@@ -82,6 +82,27 @@ class SmsServices {
       throw new Error('Failed to send Password via SMS')
     }
   }
+  static async sendOrderNotificationToAdmin({
+    mobileNo,
+    orderId,
+    sellerName,
+    sellerPhoneNo,
+    customerName,
+    customerPhoneNo,
+    deliveryAddress,
+  }: {
+    mobileNo: string
+    orderId: number
+    sellerName: string
+    sellerPhoneNo: string
+    customerName: string
+    customerPhoneNo: string
+    deliveryAddress: string
+  }) {
+    const message = `নতুন অর্ডার এসেছে (অর্ডার আইডি: ${orderId})। বিক্রেতার নাম: ${sellerName}, ফোন নম্বর: ${sellerPhoneNo}, গ্রাহকের নাম: ${customerName}, ফোন নম্বর: ${customerPhoneNo}, ডেলিভারি ঠিকানা: ${deliveryAddress}`
+    return this.sendMessage(mobileNo, message)
+  }
+
   // A generic method to send any message via SMS
   static async sendMessage(mobileNo: string, message: string) {
     try {

@@ -101,6 +101,12 @@ class SmsServices {
             }
         });
     }
+    static sendOrderNotificationToAdmin(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ mobileNo, orderId, sellerName, sellerPhoneNo, customerName, customerPhoneNo, deliveryAddress, }) {
+            const message = `নতুন অর্ডার এসেছে (অর্ডার আইডি: ${orderId})। বিক্রেতার নাম: ${sellerName}, ফোন নম্বর: ${sellerPhoneNo}, গ্রাহকের নাম: ${customerName}, ফোন নম্বর: ${customerPhoneNo}, ডেলিভারি ঠিকানা: ${deliveryAddress}`;
+            return this.sendMessage(mobileNo, message);
+        });
+    }
     // A generic method to send any message via SMS
     static sendMessage(mobileNo, message) {
         return __awaiter(this, void 0, void 0, function* () {

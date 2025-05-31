@@ -6,6 +6,7 @@ import prisma from '../utils/prisma'
 import commissionServices from './commission.services'
 import paymentServices from './payment.services'
 import productServices from './product.services'
+import SmsServices from './sms.services'
 import transactionServices from './transaction.services'
 import userServices from './user.services'
 import walletServices from './wallet.services'
@@ -339,6 +340,17 @@ class OrderServices {
             remarks: 'অর্ডার ভেরিফিকেশনের জন্য ডেলিভারি চার্জ কাটা হয়েছে',
           })
         }
+        // Find admin
+        const admin = await userServices.getAdminForTheUsers()
+        await SmsServices.sendOrderNotificationToAdmin({
+          mobileNo: admin!.phoneNo,
+          orderId: createdOrder.orderId,
+          sellerName: createdOrder.sellerName,
+          sellerPhoneNo: createdOrder.sellerPhoneNo,
+          customerName: createdOrder.customerName,
+          customerPhoneNo: createdOrder.customerPhoneNo,
+          deliveryAddress: createdOrder.deliveryAddress,
+        })
         return createdOrder
       })
 
