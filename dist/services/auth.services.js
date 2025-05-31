@@ -266,7 +266,7 @@ class AuthServices {
      */
     getAllUsers() {
         return __awaiter(this, arguments, void 0, function* (filters = {}, page, pageSize) {
-            return user_services_1.default.getAllUsers(filters, page, pageSize);
+            return user_services_1.default.getAllSellers(filters.phoneNo, filters.name, page, pageSize);
         });
     }
     /**
