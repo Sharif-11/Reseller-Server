@@ -14,7 +14,7 @@ exports.default = {
     saltRounds: process.env.SALT_ROUNDS || '10',
     jwtSecret: process.env.JWT_SECRET,
     otpLength: 6,
-    otpExpiresIn: 5 * 60 * 1000, // 2 minutes
+    otpExpiresIn: 2 * 60 * 1000, // 2 minutes
     apiKey: 'hsYr6qwobYaKBZdh8xXJ',
     senderId: '8809617623563',
     smsUrl: 'http://bulksmsbd.net/api/smsapi',

@@ -24,7 +24,9 @@ class OtpServices {
         'ফোন নম্বরটি ইতিমধ্যে একটি ব্যবহারকারীর সাথে যুক্ত।'
       )
     }
-
+    if (contact?.isVerified) {
+      return { isVerified: true, isBlocked: false, sendOTP: false }
+    }
     // Check if OTP was sent recently
     if (contact?.otpCreatedAt) {
       const timeSinceLastOtp = Date.now() - contact.otpCreatedAt.getTime()

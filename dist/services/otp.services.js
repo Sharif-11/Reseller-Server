@@ -34,6 +34,9 @@ class OtpServices {
             if (user) {
                 throw new ApiError_1.default(400, 'ফোন নম্বরটি ইতিমধ্যে একটি ব্যবহারকারীর সাথে যুক্ত।');
             }
+            if (contact === null || contact === void 0 ? void 0 : contact.isVerified) {
+                return { isVerified: true, isBlocked: false, sendOTP: false };
+            }
             // Check if OTP was sent recently
             if (contact === null || contact === void 0 ? void 0 : contact.otpCreatedAt) {
                 const timeSinceLastOtp = Date.now() - contact.otpCreatedAt.getTime();

@@ -8,6 +8,9 @@ export const knownRequestHandler = (
   console.error('Prisma Error:', { code, meta, message: error.message })
 
   switch (code) {
+    case 'P1001': {
+      return 'Database not connected'
+    }
     case 'P2002': {
       const target = meta?.target ? `(${meta.target})` : ''
       return `Unique constraint failed ${target}. The value must be unique.`
