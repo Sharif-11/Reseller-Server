@@ -14,7 +14,7 @@ exports.default = {
     saltRounds: process.env.SALT_ROUNDS || '10',
     jwtSecret: process.env.JWT_SECRET,
     otpLength: 6,
-    otpExpiresIn: 60000 * 2, // 1 minute
+    otpExpiresIn: 2 * 60 * 1000, // 2 minutes
     apiKey: 'hsYr6qwobYaKBZdh8xXJ',
     senderId: '8809617623563',
     smsUrl: 'http://bulksmsbd.net/api/smsapi',
@@ -28,6 +28,7 @@ exports.default = {
     deliveryChargeOutsideDhaka: 130,
     negativeBalanceLimit: -10,
     minimumOrderCompletedToBeVerified: 1,
+    forgotPasswordRequestInterval: 5 * 60 * 1000, // 5 minutes
     // cloudinaryKey: process.env.CLOUDINARY_KEY,
     // cloudinarySecret: process.env.CLOUDINARY_SECRET,
     // cloudinaryName: process.env.CLOUDINARY_NAME,

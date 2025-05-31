@@ -27,18 +27,26 @@ class OtpServices {
     sendOtp(phoneNo) {
         return __awaiter(this, void 0, void 0, function* () {
             let contact = yield contact_services_1.default.getContactByPhoneNo(phoneNo);
-            // console.log({ contact })
-            if (!contact) {
-                const otp = utility_services_1.default.generateOtp();
-                contact = yield contact_services_1.default.createContact(phoneNo, otp);
-                yield sms_services_1.default.sendOtp(phoneNo, otp);
-                return { sendOTP: true, isBlocked: false, isVerified: false };
-            }
+            // Check if user exists
             const user = yield prisma_1.default.user.findUnique({
                 where: { phoneNo },
             });
             if (user) {
                 throw new ApiError_1.default(400, 'ফোন নম্বরটি ইতিমধ্যে একটি ব্যবহারকারীর সাথে যুক্ত।');
+            }
+            // Check if OTP was sent recently
+            if (contact === null || contact === void 0 ? void 0 : contact.otpCreatedAt) {
+                const timeSinceLastOtp = Date.now() - contact.otpCreatedAt.getTime();
+                if (timeSinceLastOtp < config_1.default.otpExpiresIn) {
+                    const timeLeft = Math.ceil((config_1.default.otpExpiresIn - timeSinceLastOtp) / 1000);
+                    throw new ApiError_1.default(429, `ইতিমধ্যে একটি ওটিপি পাঠানো হয়েছে। অনুগ্রহ করে ${timeLeft} সেকেন্ড পরে আবার চেষ্টা করুন।`);
+                }
+            }
+            if (!contact) {
+                const otp = utility_services_1.default.generateOtp();
+                contact = yield contact_services_1.default.createContact(phoneNo, otp);
+                yield sms_services_1.default.sendOtp(phoneNo, otp);
+                return { sendOTP: true, isBlocked: false, isVerified: false };
             }
             if (contact.isVerified) {
                 return { isVerified: true, isBlocked: false, sendOTP: false };

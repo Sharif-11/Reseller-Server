@@ -8,29 +8,30 @@ datasource db {
 }
 
 model User {
-  userId                 String   @id @default(cuid()) // Use cuid for userId
-  phoneNo                String   @unique
+  userId                 String    @id @default(cuid()) // Use cuid for userId
+  phoneNo                String    @unique
   name                   String
   zilla                  String
   upazilla               String
   address                String
-  referralCode           String?  @unique // Optional
-  referredBy             User?    @relation("UserReferredBy", fields: [referredByPhone], references: [phoneNo]) // Self-referencing relationship
+  referralCode           String?   @unique // Optional
+  referredBy             User?     @relation("UserReferredBy", fields: [referredByPhone], references: [phoneNo]) // Self-referencing relationship
   referredByPhone        String? // Stores the phone number of the referrer
-  referrals              User[]   @relation("UserReferredBy") // Inverse relation for users referred by this user
-  email                  String?  @unique // Optional and unique
+  referrals              User[]    @relation("UserReferredBy") // Inverse relation for users referred by this user
+  email                  String?   @unique // Optional and unique
   password               String
-  isVerified             Boolean  @default(false)
-  balance                Decimal  @default(0.0) @db.Decimal(15, 2) // Decimal for balance with precision 10 and scale 2
+  isVerified             Boolean   @default(false)
+  balance                Decimal   @default(0.0) @db.Decimal(15, 2) // Decimal for balance with precision 10 and scale 2
   shopName               String // Optional
   nomineePhone           String? // Optional
-  forgotPasswordSmsCount Int      @default(0) // Tracks the number of forgot password SMS sent
-  isLocked               Boolean  @default(false) // Indicates whether the user is locked
-  role                   Role     @default(Seller) // Role with a default value
-  createdAt              DateTime @default(now()) // Timestamp for creation
-  updatedAt              DateTime @updatedAt // Timestamp for updates
-  version                Int      @default(1) // Version for optimistic concurrency control
+  forgotPasswordSmsCount Int       @default(0) // Tracks the number of forgot password SMS sent
+  isLocked               Boolean   @default(false) // Indicates whether the user is locked
+  role                   Role      @default(Seller) // Role with a default value
+  createdAt              DateTime  @default(now()) // Timestamp for creation
+  updatedAt              DateTime  @updatedAt // Timestamp for updates
+  version                Int       @default(1) // Version for optimistic concurrency control
   wallets                Wallet[] // Relation with Wallet model
+  passwordSendAt         DateTime? // Optional timestamp for when the password was sent
 
   @@index([phoneNo], name: "userIndex")
   @@map("users") // Optional: Custom table name in the database

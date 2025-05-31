@@ -13,24 +13,37 @@ class OtpServices {
    */
   async sendOtp(phoneNo: string) {
     let contact = await contactServices.getContactByPhoneNo(phoneNo)
-    // console.log({ contact })
-    if (!contact) {
-      const otp = Utility.generateOtp()
-      contact = await contactServices.createContact(phoneNo, otp)
 
-      await SmsServices.sendOtp(phoneNo, otp)
-
-      return { sendOTP: true, isBlocked: false, isVerified: false }
-    }
-
+    // Check if user exists
     const user = await prisma.user.findUnique({
       where: { phoneNo },
     })
     if (user) {
       throw new ApiError(
         400,
-        'ফোন নম্বরটি ইতিমধ্যে একটি ব্যবহারকারীর সাথে যুক্ত।',
+        'ফোন নম্বরটি ইতিমধ্যে একটি ব্যবহারকারীর সাথে যুক্ত।'
       )
+    }
+
+    // Check if OTP was sent recently
+    if (contact?.otpCreatedAt) {
+      const timeSinceLastOtp = Date.now() - contact.otpCreatedAt.getTime()
+      if (timeSinceLastOtp < config.otpExpiresIn) {
+        const timeLeft = Math.ceil(
+          (config.otpExpiresIn - timeSinceLastOtp) / 1000
+        )
+        throw new ApiError(
+          429,
+          `ইতিমধ্যে একটি ওটিপি পাঠানো হয়েছে। অনুগ্রহ করে ${timeLeft} সেকেন্ড পরে আবার চেষ্টা করুন।`
+        )
+      }
+    }
+
+    if (!contact) {
+      const otp = Utility.generateOtp()
+      contact = await contactServices.createContact(phoneNo, otp)
+      await SmsServices.sendOtp(phoneNo, otp)
+      return { sendOTP: true, isBlocked: false, isVerified: false }
     }
 
     if (contact.isVerified) {
@@ -40,7 +53,7 @@ class OtpServices {
     if (contact.isBlocked) {
       throw new ApiError(
         403,
-        'অতিরিক্ত ওটিপি অনুরোধের কারণে এই কন্টাক্টটি ব্লক করা হয়েছে।',
+        'অতিরিক্ত ওটিপি অনুরোধের কারণে এই কন্টাক্টটি ব্লক করা হয়েছে।'
       )
     }
 
@@ -48,13 +61,12 @@ class OtpServices {
       await contactServices.blockContact(phoneNo)
       throw new ApiError(
         403,
-        'বহুবার ওটিপি অনুরোধ করার কারণে কন্টাক্টটি ব্লক করা হয়েছে।',
+        'বহুবার ওটিপি অনুরোধ করার কারণে কন্টাক্টটি ব্লক করা হয়েছে।'
       )
     }
 
     const otp = Utility.generateOtp()
     await contactServices.updateContact(phoneNo, otp)
-
     await SmsServices.sendOtp(phoneNo, otp)
 
     return { sendOTP: true, isBlocked: false, isVerified: false }
@@ -76,7 +88,7 @@ class OtpServices {
     if (!contact.otp || !contact.otpCreatedAt) {
       throw new ApiError(
         400,
-        'ওটিপি পাওয়া যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।',
+        'ওটিপি পাওয়া যায়নি। অনুগ্রহ করে আবার চেষ্টা করুন।'
       )
     }
     if (contact.isVerified) {
@@ -84,13 +96,13 @@ class OtpServices {
     }
 
     const otpExpiryTime = new Date(
-      contact.otpCreatedAt.getTime() + config.otpExpiresIn,
+      contact.otpCreatedAt.getTime() + config.otpExpiresIn
     )
 
     if (new Date() > otpExpiryTime) {
       throw new ApiError(
         400,
-        'ওটিপি মেয়াদোত্তীর্ণ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।',
+        'ওটিপি মেয়াদোত্তীর্ণ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।'
       )
     }
 

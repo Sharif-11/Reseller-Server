@@ -279,12 +279,25 @@ class UserServices {
             if (user.isLocked && user.role !== 'Admin') {
                 throw new ApiError_1.default(400, 'আপনার অ্যাকাউন্ট লক করা হয়েছে। আনলক করতে আপনার অ্যাকাউন্ট রিচার্জ করুন।');
             }
+            // Check if password was requested recently
+            if (user.passwordSendAt) {
+                const timeSinceLastRequest = Date.now() - user.passwordSendAt.getTime();
+                if (timeSinceLastRequest < config_1.default.forgotPasswordRequestInterval) {
+                    const timeLeft = Math.ceil((config_1.default.forgotPasswordRequestInterval - timeSinceLastRequest) /
+                        1000 /
+                        60); // Convert to minutes
+                    throw new ApiError_1.default(429, `পাসওয়ার্ড ইতিমধ্যেই পাঠানো হয়েছে। অনুগ্রহ করে ${timeLeft} মিনিট পরে আবার চেষ্টা করুন।`);
+                }
+            }
             // Use transaction for atomic operations
             return yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
                 // Update password first
                 yield tx.user.update({
                     where: { phoneNo },
-                    data: { password: hashedPassword },
+                    data: {
+                        password: hashedPassword,
+                        passwordSendAt: new Date(), // Update the timestamp
+                    },
                 });
                 // Handle SMS charges based on user role and attempt count
                 if (user.role !== 'Admin') {

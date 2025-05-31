@@ -311,6 +311,7 @@ class UserServices {
   async forgotPassword(phoneNo: string) {
     const newPassword = Utility.generateOtp()
     const hashedPassword = await Utility.hashPassword(newPassword)
+
     const user = await prisma.user.findUnique({ where: { phoneNo } })
 
     if (!user) {
@@ -319,6 +320,7 @@ class UserServices {
         'এই ফোন নম্বর দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি'
       )
     }
+
     if (user.isLocked && user.role !== 'Admin') {
       throw new ApiError(
         400,
@@ -326,12 +328,31 @@ class UserServices {
       )
     }
 
+    // Check if password was requested recently
+    if (user.passwordSendAt) {
+      const timeSinceLastRequest = Date.now() - user.passwordSendAt.getTime()
+      if (timeSinceLastRequest < config.forgotPasswordRequestInterval) {
+        const timeLeft = Math.ceil(
+          (config.forgotPasswordRequestInterval - timeSinceLastRequest) /
+            1000 /
+            60
+        ) // Convert to minutes
+        throw new ApiError(
+          429,
+          `পাসওয়ার্ড ইতিমধ্যেই পাঠানো হয়েছে। অনুগ্রহ করে ${timeLeft} মিনিট পরে আবার চেষ্টা করুন।`
+        )
+      }
+    }
+
     // Use transaction for atomic operations
     return await prisma.$transaction(async tx => {
       // Update password first
       await tx.user.update({
         where: { phoneNo },
-        data: { password: hashedPassword },
+        data: {
+          password: hashedPassword,
+          passwordSendAt: new Date(), // Update the timestamp
+        },
       })
 
       // Handle SMS charges based on user role and attempt count

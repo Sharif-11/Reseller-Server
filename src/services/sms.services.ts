@@ -76,7 +76,7 @@ class SmsServices {
           message: `আপনার পাসওয়ার্ডটি হলো: ${password}। এই পাসওয়ার্ডটি অনুগ্রহ করে কাউকে জানাবেন না।`,
         },
       })
-      console.log('Password SMS Response:', response.data)
+
       return this.handleSmsResponse(response.data)
     } catch (error) {
       throw new Error('Failed to send Password via SMS')
