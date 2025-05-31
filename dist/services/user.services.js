@@ -17,6 +17,7 @@ const ApiError_1 = __importDefault(require("../utils/ApiError"));
 const prisma_1 = __importDefault(require("../utils/prisma"));
 const contact_services_1 = __importDefault(require("./contact.services"));
 const sms_services_1 = __importDefault(require("./sms.services"));
+const transaction_services_1 = __importDefault(require("./transaction.services"));
 const utility_services_1 = __importDefault(require("./utility.services"));
 class UserServices {
     /**
@@ -269,58 +270,52 @@ class UserServices {
     }
     forgotPassword(phoneNo) {
         return __awaiter(this, void 0, void 0, function* () {
-            // Generate a random password
-            const newPassword = utility_services_1.default.generateOtp(); // 6-digit OTP as a temporary password
-            // Hash the new password
+            const newPassword = utility_services_1.default.generateOtp();
             const hashedPassword = yield utility_services_1.default.hashPassword(newPassword);
             const user = yield prisma_1.default.user.findUnique({ where: { phoneNo } });
-            if (!user)
+            if (!user) {
                 throw new ApiError_1.default(404, 'এই ফোন নম্বর দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি');
+            }
             if (user.isLocked && user.role !== 'Admin') {
                 throw new ApiError_1.default(400, 'আপনার অ্যাকাউন্ট লক করা হয়েছে। আনলক করতে আপনার অ্যাকাউন্ট রিচার্জ করুন।');
             }
-            if (user.role !== 'Admin') {
-                if (user.forgotPasswordSmsCount < config_1.default.maxForgotPasswordAttempts) {
-                    // Free SMS
-                    yield prisma_1.default.user.update({
-                        where: { phoneNo },
-                        data: {
-                            forgotPasswordSmsCount: { increment: 1 },
-                            password: hashedPassword,
-                        },
-                    });
-                    yield sms_services_1.default.sendPassword(user.phoneNo, newPassword);
-                }
-                else {
-                    // Paid SMS
-                    const newBalance = +user.balance - config_1.default.smsCharge;
-                    yield prisma_1.default.user.update({
-                        where: { phoneNo },
-                        data: {
-                            balance: newBalance,
-                            password: hashedPassword,
-                        },
-                    });
-                    yield sms_services_1.default.sendPassword(user.phoneNo, newPassword);
-                    yield prisma_1.default.user.update({
-                        where: { phoneNo },
-                        data: {
-                            forgotPasswordSmsCount: { increment: 1 },
-                            isLocked: newBalance < 0,
-                        },
-                    });
-                }
-            }
-            else {
-                yield prisma_1.default.user.update({
+            // Use transaction for atomic operations
+            return yield prisma_1.default.$transaction((tx) => __awaiter(this, void 0, void 0, function* () {
+                // Update password first
+                yield tx.user.update({
                     where: { phoneNo },
-                    data: {
-                        password: hashedPassword,
-                    },
+                    data: { password: hashedPassword },
                 });
+                // Handle SMS charges based on user role and attempt count
+                if (user.role !== 'Admin') {
+                    if (user.forgotPasswordSmsCount < config_1.default.maxForgotPasswordAttempts) {
+                        // Free SMS - just increment count
+                        yield tx.user.update({
+                            where: { phoneNo },
+                            data: { forgotPasswordSmsCount: { increment: 1 } },
+                        });
+                    }
+                    else {
+                        // Paid SMS - deduct charge
+                        yield transaction_services_1.default.deductSmsChargeForForgotPassword({
+                            tx,
+                            userId: user.userId,
+                            amount: config_1.default.smsCharge,
+                            phoneNo: user.phoneNo,
+                            name: user.name,
+                            remarks: 'পাসওয়ার্ড রিসেট এসএমএস চার্জ',
+                        });
+                        // Also increment attempt count
+                        yield tx.user.update({
+                            where: { phoneNo },
+                            data: { forgotPasswordSmsCount: { increment: 1 } },
+                        });
+                    }
+                }
+                // Send SMS in all cases
                 yield sms_services_1.default.sendPassword(user.phoneNo, newPassword);
-            }
-            return { sendPassword: true };
+                return { sendPassword: true };
+            }));
         });
     }
     /**

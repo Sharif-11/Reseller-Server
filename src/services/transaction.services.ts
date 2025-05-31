@@ -682,6 +682,60 @@ class TransactionService {
       )
     }
   }
+  /**
+   * Deduct SMS charge for forgot password functionality
+   * @param tx - Prisma transaction client
+   * @param userId - User ID
+   * @param amount - SMS charge amount
+   * @param phoneNo - User phone number
+   * @param name - User name
+   * @param remarks - Additional remarks
+   * @returns Created transaction record
+   * @throws ApiError if deduction fails
+   */
+  async deductSmsChargeForForgotPassword({
+    tx,
+    userId,
+    amount,
+    phoneNo,
+    name,
+    remarks = 'পাসওয়ার্ড রিসেট এসএমএস চার্জ',
+  }: {
+    tx: Prisma.TransactionClient
+    userId: string
+    amount: number
+    phoneNo: string
+    name: string
+    remarks?: string
+  }) {
+    const decimalAmount = new Decimal(amount)
+    if (decimalAmount.isNegative()) {
+      throw new ApiError(400, 'পরিমাণ নেগেটিভ হতে পারবে না')
+    }
+
+    const user = await this.getUserWithLock(tx, userId)
+    const newBalance = user.balance.minus(decimalAmount)
+
+    // Update user balance and check if account should be locked
+    await this.updateUserBalance(
+      tx,
+      userId,
+      user.version,
+      newBalance,
+      newBalance.isNegative()
+    )
+
+    // Create transaction record
+    return await this.createTransactionRecord(tx, {
+      amount: decimalAmount,
+      userId,
+      userPhoneNo: phoneNo,
+      userName: name,
+      type: 'Debit',
+      reason: 'পাসওয়ার্ড রিসেট এসএমএস চার্জ',
+      remarks,
+    })
+  }
 }
 
 export default new TransactionService()

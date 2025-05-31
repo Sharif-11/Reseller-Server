@@ -21,7 +21,7 @@ exports.default = {
     maximumOtpAttempts: 3,
     nodeEnv: process.env.NODE_ENV || 'development',
     smsCharge: 0.75,
-    maxForgotPasswordAttempts: 3,
+    maxForgotPasswordAttempts: 1,
     maximumWallets: 3,
     maximumWithdrawAmount: 10000,
     deliveryChargeInsideDhaka: 80,

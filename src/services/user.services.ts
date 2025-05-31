@@ -4,6 +4,7 @@ import ApiError from '../utils/ApiError'
 import prisma from '../utils/prisma'
 import contactServices from './contact.services'
 import SmsServices from './sms.services'
+import transactionServices from './transaction.services'
 import Utility from './utility.services'
 
 class UserServices {
@@ -308,18 +309,16 @@ class UserServices {
     return updatedUser
   }
   async forgotPassword(phoneNo: string) {
-    // Generate a random password
-    const newPassword = Utility.generateOtp() // 6-digit OTP as a temporary password
-
-    // Hash the new password
+    const newPassword = Utility.generateOtp()
     const hashedPassword = await Utility.hashPassword(newPassword)
     const user = await prisma.user.findUnique({ where: { phoneNo } })
 
-    if (!user)
+    if (!user) {
       throw new ApiError(
         404,
         'এই ফোন নম্বর দিয়ে কোনো অ্যাকাউন্ট পাওয়া যায়নি'
       )
+    }
     if (user.isLocked && user.role !== 'Admin') {
       throw new ApiError(
         400,
@@ -327,48 +326,46 @@ class UserServices {
       )
     }
 
-    if (user.role !== 'Admin') {
-      if (user.forgotPasswordSmsCount < config.maxForgotPasswordAttempts) {
-        // Free SMS
-        await prisma.user.update({
-          where: { phoneNo },
-          data: {
-            forgotPasswordSmsCount: { increment: 1 },
-            password: hashedPassword,
-          },
-        })
-        await SmsServices.sendPassword(user.phoneNo, newPassword)
-      } else {
-        // Paid SMS
-        const newBalance = +user.balance - config.smsCharge
-
-        await prisma.user.update({
-          where: { phoneNo },
-          data: {
-            balance: newBalance,
-            password: hashedPassword,
-          },
-        })
-
-        await SmsServices.sendPassword(user.phoneNo, newPassword)
-        await prisma.user.update({
-          where: { phoneNo },
-          data: {
-            forgotPasswordSmsCount: { increment: 1 },
-            isLocked: newBalance < 0,
-          },
-        })
-      }
-    } else {
-      await prisma.user.update({
+    // Use transaction for atomic operations
+    return await prisma.$transaction(async tx => {
+      // Update password first
+      await tx.user.update({
         where: { phoneNo },
-        data: {
-          password: hashedPassword,
-        },
+        data: { password: hashedPassword },
       })
+
+      // Handle SMS charges based on user role and attempt count
+      if (user.role !== 'Admin') {
+        if (user.forgotPasswordSmsCount < config.maxForgotPasswordAttempts) {
+          // Free SMS - just increment count
+          await tx.user.update({
+            where: { phoneNo },
+            data: { forgotPasswordSmsCount: { increment: 1 } },
+          })
+        } else {
+          // Paid SMS - deduct charge
+          await transactionServices.deductSmsChargeForForgotPassword({
+            tx,
+            userId: user.userId,
+            amount: config.smsCharge,
+            phoneNo: user.phoneNo,
+            name: user.name,
+            remarks: 'পাসওয়ার্ড রিসেট এসএমএস চার্জ',
+          })
+
+          // Also increment attempt count
+          await tx.user.update({
+            where: { phoneNo },
+            data: { forgotPasswordSmsCount: { increment: 1 } },
+          })
+        }
+      }
+
+      // Send SMS in all cases
       await SmsServices.sendPassword(user.phoneNo, newPassword)
-    }
-    return { sendPassword: true }
+
+      return { sendPassword: true }
+    })
   }
   /**
    * Get all users with filters (phoneNo, name), pagination is optional
