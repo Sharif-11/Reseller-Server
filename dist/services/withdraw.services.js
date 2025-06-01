@@ -311,7 +311,7 @@ class WithdrawRequestServices {
                     try {
                         yield sms_services_1.default.sendMessage(completedRequest.updatedRequest.userPhoneNo, `${new decimal_js_1.default(request.actualAmount)
                             .toNumber()
-                            .toFixed(2)} টাকা সফলভাবে আপনার ${request.walletName}(${request.walletPhoneNo}) অ্যাকাউন্টে প্রেরণ করা হয়েছে। প্রেরক: ${transactionPhoneNo}। tnxId: ${transactionId}। ট্রানজেকশন ফি: ${request.transactionFee} টাকা।`);
+                            .toFixed(2)} টাকা সফলভাবে আপনার ${request.walletName}(${request.walletPhoneNo}) অ্যাকাউন্টে প্রেরণ করা হয়েছে, ট্রানজেকশন ফি: ${request.transactionFee} টাকা।`);
                     }
                     catch (error) {
                         // throw new ApiError(500, 'এসএমএস পাঠানো যায়নি')

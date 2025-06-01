@@ -368,7 +368,7 @@ class WithdrawRequestServices {
               .toNumber()
               .toFixed(2)} টাকা সফলভাবে আপনার ${request.walletName}(${
               request.walletPhoneNo
-            }) অ্যাকাউন্টে প্রেরণ করা হয়েছে। প্রেরক: ${transactionPhoneNo}। tnxId: ${transactionId}। ট্রানজেকশন ফি: ${
+            }) অ্যাকাউন্টে প্রেরণ করা হয়েছে, ট্রানজেকশন ফি: ${
               request.transactionFee
             } টাকা।`
           )
