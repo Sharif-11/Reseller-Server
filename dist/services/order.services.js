@@ -531,6 +531,10 @@ class OrderServices {
                         orderStatus: client_1.OrderStatus.processing,
                     },
                 });
+                yield sms_services_1.default.notifyOrderProcessed({
+                    sellerPhoneNo: updatedOrder.sellerPhoneNo,
+                    orderId: updatedOrder.orderId,
+                });
                 return updatedOrder;
             }
         });
@@ -557,6 +561,11 @@ class OrderServices {
                     courierName,
                     trackingURL,
                 },
+            });
+            yield sms_services_1.default.notifyOrderShipped({
+                sellerPhoneNo: updatedOrder.sellerPhoneNo,
+                orderId: updatedOrder.orderId,
+                trackingUrl: updatedOrder.trackingURL,
             });
             return updatedOrder;
         });
@@ -663,6 +672,12 @@ class OrderServices {
                 maxWait: 20000, // 10 seconds max wait
                 timeout: 60000,
                 isolationLevel: 'Serializable',
+            });
+            yield sms_services_1.default.notifyOrderCompleted({
+                sellerPhoneNo: updatedOrder.sellerPhoneNo,
+                orderId: updatedOrder.orderId,
+                orderAmount: updatedOrder.totalProductSellingPrice.toNumber(),
+                commission: updatedOrder.actualCommission.toNumber(),
             });
             return updatedOrder;
         });

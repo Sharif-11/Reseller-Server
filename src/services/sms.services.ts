@@ -100,7 +100,7 @@ class SmsServices {
     customerPhoneNo: string
     deliveryAddress: string
   }) {
-    const message = `নতুন অর্ডার এসেছে (অর্ডার আইডি: ${orderId})। বিক্রেতার নাম: ${sellerName}, ফোন নম্বর: ${sellerPhoneNo}, গ্রাহকের নাম: ${customerName}, ফোন নম্বর: ${customerPhoneNo}, ডেলিভারি ঠিকানা: ${deliveryAddress}`
+    const message = `নতুন অর্ডার এসেছে (অর্ডার আইডি: ${orderId}),ডেলিভারি ঠিকানা: ${deliveryAddress}`
     return this.sendMessage(mobileNo, message)
   }
 
@@ -123,7 +123,7 @@ class SmsServices {
     sellerPhoneNo: string
     amount: number
   }) {
-    const message = `ব্যালেন্স উত্তোলনের অনুরোধ: বিক্রেতা ${sellerName} (ফোন: ${sellerPhoneNo}) ${amount} টাকা উত্তোলনের অনুরোধ করেছেন। অনুগ্রহ করে এটি প্রসেস করুন।`
+    const message = `ব্যালেন্স উত্তোলনের অনুরোধ: বিক্রেতা ${sellerName} (ফোন: ${sellerPhoneNo}) ${amount} টাকা উত্তোলনের অনুরোধ করেছেন, অনুগ্রহ করে এটি প্রসেস করুন।`
     return this.sendMessage(mobileNo, message)
   }
 
@@ -145,6 +145,62 @@ class SmsServices {
       console.error('Error sending Message SMS:', error)
       throw new ApiError(400, 'Failed to send Message via SMS')
     }
+  }
+  /**
+   * Notify seller that their order has been processed
+   * @param sellerPhoneNo - Seller's phone number
+   * @param orderId - The order ID that was processed
+   */
+  static async notifyOrderProcessed({
+    sellerPhoneNo,
+    orderId,
+  }: {
+    sellerPhoneNo: string
+    orderId: number
+  }) {
+    const message = `আপনার অর্ডারটি (#${orderId}) শীঘ্রই শিপ করা হবে।`
+    return this.sendMessage(sellerPhoneNo, message)
+  }
+
+  /**
+   * Notify seller that their order has been shipped with tracking URL
+   * @param sellerPhoneNo - Seller's phone number
+   * @param orderId - The order ID that was shipped
+   * @param trackingUrl - Tracking URL for the shipment
+   */
+  static async notifyOrderShipped({
+    sellerPhoneNo,
+    orderId,
+    trackingUrl,
+  }: {
+    sellerPhoneNo: string
+    orderId: number
+    trackingUrl: string
+  }) {
+    const message = `আপনার অর্ডার #${orderId} শিপ করা হয়েছে, ট্র্যাক করতে লিঙ্কে ক্লিক করুন: ${trackingUrl}`
+    return this.sendMessage(sellerPhoneNo, message)
+  }
+
+  /**
+   * Notify seller about order completion and commission
+   * @param sellerPhoneNo - Seller's phone number
+   * @param orderId - The completed order ID
+   * @param orderAmount - Total order amount
+   * @param commission - Commission deducted from the order
+   */
+  static async notifyOrderCompleted({
+    sellerPhoneNo,
+    orderId,
+    orderAmount,
+    commission,
+  }: {
+    sellerPhoneNo: string
+    orderId: number
+    orderAmount: number
+    commission: number
+  }) {
+    const message = `অর্ডার #${orderId} সম্পন্ন হয়েছে, মোট অর্ডার পরিমাণ: ${orderAmount} টাকা, কমিশন: ${commission} টাকা।`
+    return this.sendMessage(sellerPhoneNo, message)
   }
 
   static handleSmsResponse(response: SmsResponse): string {

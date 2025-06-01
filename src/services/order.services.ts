@@ -642,6 +642,10 @@ class OrderServices {
           orderStatus: OrderStatus.processing,
         },
       })
+      await SmsServices.notifyOrderProcessed({
+        sellerPhoneNo: updatedOrder.sellerPhoneNo,
+        orderId: updatedOrder.orderId,
+      })
 
       return updatedOrder
     }
@@ -674,7 +678,11 @@ class OrderServices {
         trackingURL,
       },
     })
-
+    await SmsServices.notifyOrderShipped({
+      sellerPhoneNo: updatedOrder.sellerPhoneNo,
+      orderId: updatedOrder.orderId,
+      trackingUrl: updatedOrder.trackingURL as string,
+    })
     return updatedOrder
   }
   /**
@@ -796,6 +804,12 @@ class OrderServices {
         isolationLevel: 'Serializable',
       }
     )
+    await SmsServices.notifyOrderCompleted({
+      sellerPhoneNo: updatedOrder.sellerPhoneNo,
+      orderId: updatedOrder.orderId,
+      orderAmount: updatedOrder.totalProductSellingPrice.toNumber(),
+      commission: updatedOrder.actualCommission.toNumber(),
+    })
     return updatedOrder
   }
 
