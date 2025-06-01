@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const config_1 = __importDefault(require("../config"));
 const ApiError_1 = __importDefault(require("../utils/ApiError"));
 const sms_services_1 = __importDefault(require("./sms.services"));
+const user_services_1 = __importDefault(require("./user.services"));
 const utility_services_1 = __importDefault(require("./utility.services"));
 const walletContact_services_1 = __importDefault(require("./walletContact.services"));
 class WalletOtpServices {
@@ -25,6 +26,10 @@ class WalletOtpServices {
      */
     sendOtp(phoneNo) {
         return __awaiter(this, void 0, void 0, function* () {
+            const existingUser = yield user_services_1.default.getUserByPhoneNo(phoneNo);
+            if (existingUser) {
+                throw new ApiError_1.default(400, 'এই ফোন নম্বরটি ইতিমধ্যে একটি ব্যবহারকারীর সাথে যুক্ত।');
+            }
             let contact = yield walletContact_services_1.default.getWalletContactByPhoneNo(phoneNo);
             // console.log({ contact })
             if (!contact) {
@@ -38,6 +43,19 @@ class WalletOtpServices {
             }
             if (contact.isBlocked) {
                 throw new ApiError_1.default(403, 'অতিরিক্ত ওটিপি অনুরোধের কারণে এই কন্টাক্টটি ব্লক করা হয়েছে।');
+            }
+            if (contact === null || contact === void 0 ? void 0 : contact.otpCreatedAt) {
+                const timeSinceLastOtp = Date.now() - contact.otpCreatedAt.getTime();
+                if (timeSinceLastOtp < config_1.default.otpExpiresIn) {
+                    const timeLeft = Math.ceil((config_1.default.otpExpiresIn - timeSinceLastOtp) / 1000);
+                    return {
+                        sendOTP: false,
+                        alreadySent: true,
+                        isBlocked: false,
+                        isVerified: false,
+                        message: `ইতিমধ্যে একটি ওটিপি পাঠানো হয়েছে। অনুগ্রহ করে ${timeLeft} সেকেন্ড পরে আবার চেষ্টা করুন।`,
+                    };
+                }
             }
             if (contact.totalOTP >= config_1.default.maximumOtpAttempts) {
                 yield walletContact_services_1.default.blockWalletContact(phoneNo);

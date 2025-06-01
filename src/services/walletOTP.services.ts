@@ -1,6 +1,7 @@
 import config from '../config'
 import ApiError from '../utils/ApiError'
 import SmsServices from './sms.services'
+import userServices from './user.services'
 import Utility from './utility.services'
 import walletContactServices from './walletContact.services'
 
@@ -11,6 +12,13 @@ class WalletOtpServices {
    * @returns A response object indicating the OTP sending status and verification status
    */
   async sendOtp(phoneNo: string) {
+    const existingUser = await userServices.getUserByPhoneNo(phoneNo)
+    if (existingUser) {
+      throw new ApiError(
+        400,
+        'এই ফোন নম্বরটি ইতিমধ্যে একটি ব্যবহারকারীর সাথে যুক্ত।'
+      )
+    }
     let contact = await walletContactServices.getWalletContactByPhoneNo(phoneNo)
     // console.log({ contact })
     if (!contact) {
@@ -31,6 +39,21 @@ class WalletOtpServices {
         403,
         'অতিরিক্ত ওটিপি অনুরোধের কারণে এই কন্টাক্টটি ব্লক করা হয়েছে।'
       )
+    }
+    if (contact?.otpCreatedAt) {
+      const timeSinceLastOtp = Date.now() - contact.otpCreatedAt.getTime()
+      if (timeSinceLastOtp < config.otpExpiresIn) {
+        const timeLeft = Math.ceil(
+          (config.otpExpiresIn - timeSinceLastOtp) / 1000
+        )
+        return {
+          sendOTP: false,
+          alreadySent: true,
+          isBlocked: false,
+          isVerified: false,
+          message: `ইতিমধ্যে একটি ওটিপি পাঠানো হয়েছে। অনুগ্রহ করে ${timeLeft} সেকেন্ড পরে আবার চেষ্টা করুন।`,
+        }
+      }
     }
 
     if (contact.totalOTP >= config.maximumOtpAttempts) {
