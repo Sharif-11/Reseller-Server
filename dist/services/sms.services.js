@@ -107,6 +107,20 @@ class SmsServices {
             return this.sendMessage(mobileNo, message);
         });
     }
+    /**
+     * Notify admin about seller's balance withdrawal request
+     * @param mobileNo - Admin's mobile number
+     * @param sellerName - Name of the seller requesting withdrawal
+     * @param sellerPhoneNo - Phone number of the seller
+     * @param amount - Amount requested for withdrawal
+     * @returns The response data from the SMS API
+     */
+    static sendWithdrawalRequestToAdmin(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ mobileNo, sellerName, sellerPhoneNo, amount, }) {
+            const message = `ব্যালেন্স উত্তোলনের অনুরোধ: বিক্রেতা ${sellerName} (ফোন: ${sellerPhoneNo}) ${amount} টাকা উত্তোলনের অনুরোধ করেছেন। অনুগ্রহ করে এটি প্রসেস করুন।`;
+            return this.sendMessage(mobileNo, message);
+        });
+    }
     // A generic method to send any message via SMS
     static sendMessage(mobileNo, message) {
         return __awaiter(this, void 0, void 0, function* () {

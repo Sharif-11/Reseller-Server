@@ -82,6 +82,7 @@ class SmsServices {
       throw new Error('Failed to send Password via SMS')
     }
   }
+
   static async sendOrderNotificationToAdmin({
     mobileNo,
     orderId,
@@ -100,6 +101,29 @@ class SmsServices {
     deliveryAddress: string
   }) {
     const message = `নতুন অর্ডার এসেছে (অর্ডার আইডি: ${orderId})। বিক্রেতার নাম: ${sellerName}, ফোন নম্বর: ${sellerPhoneNo}, গ্রাহকের নাম: ${customerName}, ফোন নম্বর: ${customerPhoneNo}, ডেলিভারি ঠিকানা: ${deliveryAddress}`
+    return this.sendMessage(mobileNo, message)
+  }
+
+  /**
+   * Notify admin about seller's balance withdrawal request
+   * @param mobileNo - Admin's mobile number
+   * @param sellerName - Name of the seller requesting withdrawal
+   * @param sellerPhoneNo - Phone number of the seller
+   * @param amount - Amount requested for withdrawal
+   * @returns The response data from the SMS API
+   */
+  static async sendWithdrawalRequestToAdmin({
+    mobileNo,
+    sellerName,
+    sellerPhoneNo,
+    amount,
+  }: {
+    mobileNo: string
+    sellerName: string
+    sellerPhoneNo: string
+    amount: number
+  }) {
+    const message = `ব্যালেন্স উত্তোলনের অনুরোধ: বিক্রেতা ${sellerName} (ফোন: ${sellerPhoneNo}) ${amount} টাকা উত্তোলনের অনুরোধ করেছেন। অনুগ্রহ করে এটি প্রসেস করুন।`
     return this.sendMessage(mobileNo, message)
   }
 
@@ -122,6 +146,7 @@ class SmsServices {
       throw new ApiError(400, 'Failed to send Message via SMS')
     }
   }
+
   static handleSmsResponse(response: SmsResponse): string {
     const { response_code, success_message, error_message } = response
 

@@ -7,6 +7,17 @@ import userServices from './user.services'
 import walletServices from './wallet.services'
 
 class PaymentService {
+  private async checkTransactionIdExists(transactionId: string) {
+    const existingTransaction = await prisma.payment.findUnique({
+      where: { transactionId },
+    })
+    if (existingTransaction) {
+      throw new ApiError(
+        HttpStatusCode.BadRequest,
+        'এই ট্রানজেকশন আইডি ইতিমধ্যে ব্যবহৃত হয়েছে'
+      )
+    }
+  }
   async createDuePaymentRequest({
     adminWalletId,
     amount,
@@ -35,15 +46,7 @@ class PaymentService {
     const sellerName = seller.name
     const sellerPhoneNo = seller.phoneNo
     //check unique transactionId
-    const existingTransaction = await prisma.payment.findUnique({
-      where: { transactionId },
-    })
-    if (existingTransaction) {
-      throw new ApiError(
-        HttpStatusCode.BadRequest,
-        'Transaction ID already exists'
-      )
-    }
+    await this.checkTransactionIdExists(transactionId)
     const existingPaymentRequest = await prisma.payment.findFirst({
       where: {
         sellerId,
@@ -103,6 +106,7 @@ class PaymentService {
     orderId: number
     sellerId: string
   }) {
+    await this.checkTransactionIdExists(transactionId)
     const orderPaymentRequest = await tx.payment.create({
       data: {
         amount,
@@ -152,6 +156,7 @@ class PaymentService {
     actualAmount: number
     transactionFee: number
   }) {
+    await this.checkTransactionIdExists(transactionId)
     const withdrawPaymentRequest = await tx.payment.create({
       data: {
         amount,

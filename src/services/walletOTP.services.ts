@@ -23,23 +23,23 @@ class WalletOtpServices {
     }
 
     if (contact.isVerified) {
-      return { isVerified: true, isBlocked: false, sendOTP: false }
+      return { alreadyVerified: true, isBlocked: false, sendOTP: false }
     }
 
-    // if (contact.isBlocked) {
-    //   throw new ApiError(
-    //     403,
-    //     'অতিরিক্ত ওটিপি অনুরোধের কারণে এই কন্টাক্টটি ব্লক করা হয়েছে।'
-    //   )
-    // }
+    if (contact.isBlocked) {
+      throw new ApiError(
+        403,
+        'অতিরিক্ত ওটিপি অনুরোধের কারণে এই কন্টাক্টটি ব্লক করা হয়েছে।'
+      )
+    }
 
-    // if (contact.totalOTP >= config.maximumOtpAttempts) {
-    //   await walletContactServices.blockWalletContact(phoneNo)
-    //   throw new ApiError(
-    //     403,
-    //     'বহুবার ওটিপি অনুরোধ করার কারণে কন্টাক্টটি ব্লক করা হয়েছে।'
-    //   )
-    // }
+    if (contact.totalOTP >= config.maximumOtpAttempts) {
+      await walletContactServices.blockWalletContact(phoneNo)
+      throw new ApiError(
+        403,
+        'বহুবার ওটিপি অনুরোধ করার কারণে কন্টাক্টটি ব্লক করা হয়েছে।'
+      )
+    }
 
     const otp = Utility.generateOtp()
     await walletContactServices.updateWalletContact(phoneNo, otp)

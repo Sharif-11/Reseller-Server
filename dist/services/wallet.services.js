@@ -18,6 +18,16 @@ const prisma_1 = __importDefault(require("../utils/prisma"));
 const user_services_1 = __importDefault(require("./user.services"));
 const walletContact_services_1 = __importDefault(require("./walletContact.services"));
 class WalletService {
+    checkWalletExists(walletName, walletPhoneNo) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const wallet = yield prisma_1.default.wallet.findUnique({
+                where: { walletName_walletPhoneNo: { walletName, walletPhoneNo } },
+            });
+            if (wallet) {
+                throw new ApiError_1.default(400, 'এই নাম এবং ফোন নম্বর সহ একটি ওয়ালেট ইতিমধ্যে বিদ্যমান');
+            }
+        });
+    }
     // create a add wallet method to add a new wallet
     addWallet(_a) {
         return __awaiter(this, arguments, void 0, function* ({ userId, walletName, walletPhoneNo, }) {
@@ -111,7 +121,7 @@ class WalletService {
     }
     getAdminWalletsForUser() {
         return __awaiter(this, void 0, void 0, function* () {
-            // find admin at first 
+            // find admin at first
             const admin = yield user_services_1.default.getAdminForTheUsers();
             if (!admin) {
                 throw new ApiError_1.default(404, 'There is an error.Please try later');
@@ -122,7 +132,7 @@ class WalletService {
                     walletId: true,
                     walletName: true,
                     walletPhoneNo: true,
-                }
+                },
             });
             return wallets;
         });
@@ -134,8 +144,8 @@ class WalletService {
                 select: {
                     walletId: true,
                     walletName: true,
-                    walletPhoneNo: true
-                }
+                    walletPhoneNo: true,
+                },
             });
             if (!wallet) {
                 throw new ApiError_1.default(404, 'Wallet not found');

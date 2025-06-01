@@ -19,6 +19,16 @@ const transaction_services_1 = __importDefault(require("./transaction.services")
 const user_services_1 = __importDefault(require("./user.services"));
 const wallet_services_1 = __importDefault(require("./wallet.services"));
 class PaymentService {
+    checkTransactionIdExists(transactionId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const existingTransaction = yield prisma_1.default.payment.findUnique({
+                where: { transactionId },
+            });
+            if (existingTransaction) {
+                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'এই ট্রানজেকশন আইডি ইতিমধ্যে ব্যবহৃত হয়েছে');
+            }
+        });
+    }
     createDuePaymentRequest(_a) {
         return __awaiter(this, arguments, void 0, function* ({ adminWalletId, amount, transactionId, sellerWalletName, sellerWalletPhoneNo, sellerId, }) {
             const adminWallet = yield wallet_services_1.default.getWalletById(adminWalletId);
@@ -34,12 +44,7 @@ class PaymentService {
             const sellerName = seller.name;
             const sellerPhoneNo = seller.phoneNo;
             //check unique transactionId
-            const existingTransaction = yield prisma_1.default.payment.findUnique({
-                where: { transactionId },
-            });
-            if (existingTransaction) {
-                throw new ApiError_1.default(axios_1.HttpStatusCode.BadRequest, 'Transaction ID already exists');
-            }
+            yield this.checkTransactionIdExists(transactionId);
             const existingPaymentRequest = yield prisma_1.default.payment.findFirst({
                 where: {
                     sellerId,
@@ -72,6 +77,7 @@ class PaymentService {
     }
     createOrderPaymentRequest(_a) {
         return __awaiter(this, arguments, void 0, function* ({ tx, amount, transactionId, sellerWalletName, sellerWalletPhoneNo, sellerName, sellerPhoneNo, adminWalletId, adminWalletName, adminWalletPhoneNo, orderId, sellerId, }) {
+            yield this.checkTransactionIdExists(transactionId);
             const orderPaymentRequest = yield tx.payment.create({
                 data: {
                     amount,
@@ -95,6 +101,7 @@ class PaymentService {
     }
     createWithdrawPaymentRequest(_a) {
         return __awaiter(this, arguments, void 0, function* ({ tx, amount, transactionId, sellerWalletName, sellerWalletPhoneNo, sellerName, sellerPhoneNo, adminWalletName, adminWalletPhoneNo, sellerId, withdrawId, actualAmount, transactionFee, }) {
+            yield this.checkTransactionIdExists(transactionId);
             const withdrawPaymentRequest = yield tx.payment.create({
                 data: {
                     amount,

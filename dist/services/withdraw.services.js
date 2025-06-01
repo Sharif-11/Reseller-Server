@@ -20,6 +20,7 @@ const withdraw_utils_1 = require("../utils/withdraw.utils");
 const payment_services_1 = __importDefault(require("./payment.services"));
 const sms_services_1 = __importDefault(require("./sms.services"));
 const transaction_services_1 = __importDefault(require("./transaction.services"));
+const user_services_1 = __importDefault(require("./user.services"));
 class WithdrawRequestServices {
     /**
      * Create a new withdraw request
@@ -37,14 +38,14 @@ class WithdrawRequestServices {
         return __awaiter(this, arguments, void 0, function* ({ userId, userPhoneNo, userName, amount, walletName, walletPhoneNo, remarks, }) {
             const decimalAmount = new decimal_js_1.default(amount);
             if (decimalAmount.isNaN() || decimalAmount.isNegative()) {
-                throw new ApiError_1.default(400, 'Invalid amount.');
+                throw new ApiError_1.default(400, 'অবৈধ পরিমাণ।');
             }
             if (decimalAmount.isZero()) {
-                throw new ApiError_1.default(400, 'Amount cannot be zero.');
+                throw new ApiError_1.default(400, 'পরিমাণ শূন্য হতে পারবে না।');
             }
             // check if the amount exceed maximum limit
             if (decimalAmount.greaterThan(config_1.default.maximumWithdrawAmount)) {
-                throw new ApiError_1.default(400, 'Amount exceeds the maximum limit.');
+                throw new ApiError_1.default(400, 'পরিমাণ সর্বোচ্চ সীমা অতিক্রম করেছে।');
             }
             // check if the provide wallet name and wallet phone number is a valid one
             const wallet = yield prisma_1.default.wallet.findFirst({
@@ -55,7 +56,7 @@ class WithdrawRequestServices {
                 },
             });
             if (!wallet) {
-                throw new ApiError_1.default(404, 'Wallet not found.');
+                throw new ApiError_1.default(404, 'ওয়ালেট পাওয়া যায়নি।');
             }
             // check if the user has enough balance
             const user = yield prisma_1.default.user.findUnique({
@@ -63,20 +64,35 @@ class WithdrawRequestServices {
                 select: { balance: true },
             });
             if (!user) {
-                throw new ApiError_1.default(404, 'User not found.');
+                throw new ApiError_1.default(404, 'ব্যবহারকারী পাওয়া যায়নি।');
             }
             if (decimalAmount.greaterThan(user.balance)) {
-                throw new ApiError_1.default(400, 'Insufficient balance.');
+                throw new ApiError_1.default(400, 'পর্যাপ্ত ব্যালেন্স নেই।');
             }
+            // Get the start of the current day
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
             // Check if the user already has a pending request
-            const existingRequest = yield prisma_1.default.withdrawRequest.findFirst({
+            const existingPendingRequest = yield prisma_1.default.withdrawRequest.findFirst({
                 where: {
                     userId,
                     status: 'pending',
                 },
             });
-            if (existingRequest) {
-                throw new ApiError_1.default(400, 'You already have a pending withdrawal request.');
+            if (existingPendingRequest) {
+                throw new ApiError_1.default(400, 'আপনার একটি উত্তোলনের অনুরোধ বাকিতে রয়েছে।');
+            }
+            // Check if user has already made 2 requests today
+            const todaysRequestsCount = yield prisma_1.default.withdrawRequest.count({
+                where: {
+                    userId,
+                    requestedAt: {
+                        gte: todayStart,
+                    },
+                },
+            });
+            if (todaysRequestsCount >= 2) {
+                throw new ApiError_1.default(400, 'আপনি দিনে সর্বোচ্চ দুইবার উত্তোলনের অনুরোধ করতে পারবেন।');
             }
             const { actualAmount, transactionFee } = (0, withdraw_utils_1.calculateWithdrawal)({
                 walletName,
@@ -97,6 +113,20 @@ class WithdrawRequestServices {
                     transactionFee,
                 },
             });
+            // Notify admin about the new request
+            try {
+                const admin = yield user_services_1.default.getAdminForTheUsers();
+                yield sms_services_1.default.sendWithdrawalRequestToAdmin({
+                    mobileNo: admin.phoneNo,
+                    sellerName: userName,
+                    sellerPhoneNo: userPhoneNo,
+                    amount: decimalAmount.toNumber(),
+                });
+            }
+            catch (error) {
+                console.error('এডমিনকে এসএমএস পাঠাতে ত্রুটি:', error);
+                // Optionally, you can handle the error or log it
+            }
             return newRequest;
         });
     }
@@ -279,9 +309,9 @@ class WithdrawRequestServices {
                 );
                 if (completedRequest) {
                     try {
-                        yield sms_services_1.default.sendMessage(userPhoneNo, `${new decimal_js_1.default(request.amount)
+                        yield sms_services_1.default.sendMessage(completedRequest.updatedRequest.userPhoneNo, `${new decimal_js_1.default(request.actualAmount)
                             .toNumber()
-                            .toFixed(2)} টাকা সফলভাবে আপনার ${request.walletName}(${request.walletPhoneNo}) অ্যাকাউন্টে প্রেরণ করা হয়েছে। প্রেরক: ${transactionPhoneNo}। tnxId: ${transactionId}`);
+                            .toFixed(2)} টাকা সফলভাবে আপনার ${request.walletName}(${request.walletPhoneNo}) অ্যাকাউন্টে প্রেরণ করা হয়েছে। প্রেরক: ${transactionPhoneNo}। tnxId: ${transactionId}। ট্রানজেকশন ফি: ${request.transactionFee} টাকা।`);
                     }
                     catch (error) {
                         // throw new ApiError(500, 'এসএমএস পাঠানো যায়নি')

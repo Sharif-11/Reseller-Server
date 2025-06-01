@@ -5,6 +5,17 @@ import userServices from './user.services'
 import walletContactServices from './walletContact.services'
 
 class WalletService {
+  async checkWalletExists(walletName: string, walletPhoneNo: string) {
+    const wallet = await prisma.wallet.findUnique({
+      where: { walletName_walletPhoneNo: { walletName, walletPhoneNo } },
+    })
+    if (wallet) {
+      throw new ApiError(
+        400,
+        'এই নাম এবং ফোন নম্বর সহ একটি ওয়ালেট ইতিমধ্যে বিদ্যমান'
+      )
+    }
+  }
   // create a add wallet method to add a new wallet
   async addWallet({
     userId,
@@ -57,7 +68,7 @@ class WalletService {
     walletName,
     walletPhoneNo,
   }: {
-    userId: string;
+    userId: string
     walletName: string
     walletPhoneNo: string
   }) {
@@ -77,10 +88,9 @@ class WalletService {
       data: {
         walletName,
         walletPhoneNo,
-        userId:user.userId ,
+        userId: user.userId,
         userName: user.name,
-        userPhoneNo: user.phoneNo, 
-      
+        userPhoneNo: user.phoneNo,
       },
     })
     return newWallet
@@ -93,11 +103,10 @@ class WalletService {
       throw new ApiError(404, 'ওয়ালেট পাওয়া যায়নি')
     }
     // delete the wallet
-   const result= await prisma.wallet.delete({
+    const result = await prisma.wallet.delete({
       where: { walletId },
     })
     return result
-
   }
 
   // create a method to find all wallets of a user
@@ -111,36 +120,35 @@ class WalletService {
     })
     return wallets
   }
-  async getAdminWalletsForUser(){
-    // find admin at first 
-    const admin=await userServices.getAdminForTheUsers()
+  async getAdminWalletsForUser() {
+    // find admin at first
+    const admin = await userServices.getAdminForTheUsers()
     if (!admin) {
       throw new ApiError(404, 'There is an error.Please try later')
     }
     const wallets = await prisma.wallet.findMany({
       where: { userId: admin.userId },
-      select:{
-        walletId:true,
-        walletName:true,
-        walletPhoneNo:true,
-      }
+      select: {
+        walletId: true,
+        walletName: true,
+        walletPhoneNo: true,
+      },
     })
     return wallets
   }
   async getWalletById(walletId: number) {
     const wallet = await prisma.wallet.findUnique({
       where: { walletId },
-      select:{
-        walletId:true,
-        walletName:true,
-        walletPhoneNo:true
-      }
+      select: {
+        walletId: true,
+        walletName: true,
+        walletPhoneNo: true,
+      },
     })
     if (!wallet) {
       throw new ApiError(404, 'Wallet not found')
     }
     return wallet
   }
-
 }
 export default new WalletService()

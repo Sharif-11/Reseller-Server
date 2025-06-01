@@ -7,6 +7,7 @@ import { calculateWithdrawal } from '../utils/withdraw.utils'
 import paymentServices from './payment.services'
 import SmsServices from './sms.services'
 import transactionServices from './transaction.services'
+import userServices from './user.services'
 
 class WithdrawRequestServices {
   /**
@@ -40,14 +41,14 @@ class WithdrawRequestServices {
   }) {
     const decimalAmount = new Decimal(amount)
     if (decimalAmount.isNaN() || decimalAmount.isNegative()) {
-      throw new ApiError(400, 'Invalid amount.')
+      throw new ApiError(400, 'অবৈধ পরিমাণ।')
     }
     if (decimalAmount.isZero()) {
-      throw new ApiError(400, 'Amount cannot be zero.')
+      throw new ApiError(400, 'পরিমাণ শূন্য হতে পারবে না।')
     }
     // check if the amount exceed maximum limit
     if (decimalAmount.greaterThan(config.maximumWithdrawAmount)) {
-      throw new ApiError(400, 'Amount exceeds the maximum limit.')
+      throw new ApiError(400, 'পরিমাণ সর্বোচ্চ সীমা অতিক্রম করেছে।')
     }
     // check if the provide wallet name and wallet phone number is a valid one
     const wallet = await prisma.wallet.findFirst({
@@ -58,7 +59,7 @@ class WithdrawRequestServices {
       },
     })
     if (!wallet) {
-      throw new ApiError(404, 'Wallet not found.')
+      throw new ApiError(404, 'ওয়ালেট পাওয়া যায়নি।')
     }
     // check if the user has enough balance
     const user = await prisma.user.findUnique({
@@ -66,27 +67,51 @@ class WithdrawRequestServices {
       select: { balance: true },
     })
     if (!user) {
-      throw new ApiError(404, 'User not found.')
+      throw new ApiError(404, 'ব্যবহারকারী পাওয়া যায়নি।')
     }
     if (decimalAmount.greaterThan(user.balance)) {
-      throw new ApiError(400, 'Insufficient balance.')
+      throw new ApiError(400, 'পর্যাপ্ত ব্যালেন্স নেই।')
     }
+
+    // Get the start of the current day
+    const todayStart = new Date()
+    todayStart.setHours(0, 0, 0, 0)
+
     // Check if the user already has a pending request
-    const existingRequest = await prisma.withdrawRequest.findFirst({
+    const existingPendingRequest = await prisma.withdrawRequest.findFirst({
       where: {
         userId,
         status: 'pending',
       },
     })
 
-    if (existingRequest) {
-      throw new ApiError(400, 'You already have a pending withdrawal request.')
+    if (existingPendingRequest) {
+      throw new ApiError(400, 'আপনার একটি উত্তোলনের অনুরোধ বাকিতে রয়েছে।')
     }
+
+    // Check if user has already made 2 requests today
+    const todaysRequestsCount = await prisma.withdrawRequest.count({
+      where: {
+        userId,
+        requestedAt: {
+          gte: todayStart,
+        },
+      },
+    })
+
+    if (todaysRequestsCount >= 2) {
+      throw new ApiError(
+        400,
+        'আপনি দিনে সর্বোচ্চ দুইবার উত্তোলনের অনুরোধ করতে পারবেন।'
+      )
+    }
+
     const { actualAmount, transactionFee } = calculateWithdrawal({
       walletName,
       walletPhoneNo,
       amount: decimalAmount.toNumber(),
     })
+
     // Create a new request
     const newRequest = await prisma.withdrawRequest.create({
       data: {
@@ -101,6 +126,20 @@ class WithdrawRequestServices {
         transactionFee,
       },
     })
+
+    // Notify admin about the new request
+    try {
+      const admin = await userServices.getAdminForTheUsers()
+      await SmsServices.sendWithdrawalRequestToAdmin({
+        mobileNo: admin!.phoneNo,
+        sellerName: userName,
+        sellerPhoneNo: userPhoneNo,
+        amount: decimalAmount.toNumber(),
+      })
+    } catch (error) {
+      console.error('এডমিনকে এসএমএস পাঠাতে ত্রুটি:', error)
+      // Optionally, you can handle the error or log it
+    }
 
     return newRequest
   }
@@ -324,12 +363,14 @@ class WithdrawRequestServices {
       if (completedRequest) {
         try {
           await SmsServices.sendMessage(
-            userPhoneNo,
-            `${new Decimal(request.amount)
+            completedRequest.updatedRequest.userPhoneNo,
+            `${new Decimal(request.actualAmount)
               .toNumber()
               .toFixed(2)} টাকা সফলভাবে আপনার ${request.walletName}(${
               request.walletPhoneNo
-            }) অ্যাকাউন্টে প্রেরণ করা হয়েছে। প্রেরক: ${transactionPhoneNo}। tnxId: ${transactionId}`
+            }) অ্যাকাউন্টে প্রেরণ করা হয়েছে। প্রেরক: ${transactionPhoneNo}। tnxId: ${transactionId}। ট্রানজেকশন ফি: ${
+              request.transactionFee
+            } টাকা।`
           )
         } catch (error) {
           // throw new ApiError(500, 'এসএমএস পাঠানো যায়নি')

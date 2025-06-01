@@ -34,21 +34,15 @@ class WalletOtpServices {
                 return { sendOTP: true, isBlocked: false, isVerified: false };
             }
             if (contact.isVerified) {
-                return { isVerified: true, isBlocked: false, sendOTP: false };
+                return { alreadyVerified: true, isBlocked: false, sendOTP: false };
             }
-            // if (contact.isBlocked) {
-            //   throw new ApiError(
-            //     403,
-            //     'অতিরিক্ত ওটিপি অনুরোধের কারণে এই কন্টাক্টটি ব্লক করা হয়েছে।'
-            //   )
-            // }
-            // if (contact.totalOTP >= config.maximumOtpAttempts) {
-            //   await walletContactServices.blockWalletContact(phoneNo)
-            //   throw new ApiError(
-            //     403,
-            //     'বহুবার ওটিপি অনুরোধ করার কারণে কন্টাক্টটি ব্লক করা হয়েছে।'
-            //   )
-            // }
+            if (contact.isBlocked) {
+                throw new ApiError_1.default(403, 'অতিরিক্ত ওটিপি অনুরোধের কারণে এই কন্টাক্টটি ব্লক করা হয়েছে।');
+            }
+            if (contact.totalOTP >= config_1.default.maximumOtpAttempts) {
+                yield walletContact_services_1.default.blockWalletContact(phoneNo);
+                throw new ApiError_1.default(403, 'বহুবার ওটিপি অনুরোধ করার কারণে কন্টাক্টটি ব্লক করা হয়েছে।');
+            }
             const otp = utility_services_1.default.generateOtp();
             yield walletContact_services_1.default.updateWalletContact(phoneNo, otp);
             yield sms_services_1.default.sendOtp(phoneNo, otp);

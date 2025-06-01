@@ -18,7 +18,7 @@ exports.default = {
     apiKey: 'hsYr6qwobYaKBZdh8xXJ',
     senderId: '8809617623563',
     smsUrl: 'http://bulksmsbd.net/api/smsapi',
-    maximumOtpAttempts: 3,
+    maximumOtpAttempts: 2,
     nodeEnv: process.env.NODE_ENV || 'development',
     smsCharge: 0.75,
     maxForgotPasswordAttempts: 1,
