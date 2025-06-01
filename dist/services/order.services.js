@@ -712,6 +712,13 @@ class OrderServices {
                     });
                     return updatedOrder;
                 }));
+                try {
+                    console.log('Sending SMS to seller:', updatedOrder.sellerPhoneNo);
+                    yield sms_services_1.default.sendMessage(updatedOrder.sellerPhoneNo, `আপনার অর্ডার #${updatedOrder.orderId} ফেরত এসেছে।`);
+                }
+                catch (error) {
+                    console.error('Error sending SMS:', error);
+                }
                 return updatedOrder;
             }
             const updatedOrder = yield prisma_1.default.order.update({
@@ -720,6 +727,13 @@ class OrderServices {
                     orderStatus: client_1.OrderStatus.returned,
                 },
             });
+            try {
+                console.log('Sending SMS to seller:', updatedOrder.sellerPhoneNo);
+                yield sms_services_1.default.sendMessage(updatedOrder.sellerPhoneNo, `আপনার অর্ডার #${updatedOrder.orderId} ফেরত এসেছে।`);
+            }
+            catch (error) {
+                console.error('Error sending SMS:', error);
+            }
             return updatedOrder;
         });
     }
@@ -738,6 +752,7 @@ class OrderServices {
                     remarks,
                 },
             });
+            yield sms_services_1.default.sendMessage(updatedOrder.sellerPhoneNo, ` অনুগ্রহ করে এই অর্ডারটি (#${updatedOrder.orderId}) পুনরায় অর্ডার করুন।`);
             return updatedOrder;
         });
     }
@@ -757,6 +772,15 @@ class OrderServices {
                 data: {
                     orderStatus: client_1.OrderStatus.pending,
                 },
+            });
+            yield sms_services_1.default.sendOrderNotificationToAdmin({
+                mobileNo: updatedOrder.sellerPhoneNo,
+                orderId: updatedOrder.orderId,
+                sellerName: updatedOrder.sellerName,
+                sellerPhoneNo: updatedOrder.sellerPhoneNo,
+                customerName: updatedOrder.customerName,
+                customerPhoneNo: updatedOrder.customerPhoneNo,
+                deliveryAddress: updatedOrder.deliveryAddress,
             });
             return updatedOrder;
         });

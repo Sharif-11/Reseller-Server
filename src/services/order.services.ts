@@ -820,6 +820,7 @@ class OrderServices {
    * */
   async returnOrderByAdmin(orderId: number): Promise<Order> {
     // [Backend Fetching Needed] Get order details
+
     const order = await this.getOrderById(orderId)
 
     if (order.orderStatus !== OrderStatus.shipped) {
@@ -843,6 +844,15 @@ class OrderServices {
         })
         return updatedOrder
       })
+      try {
+        console.log('Sending SMS to seller:', updatedOrder.sellerPhoneNo)
+        await SmsServices.sendMessage(
+          updatedOrder.sellerPhoneNo,
+          `আপনার অর্ডার #${updatedOrder.orderId} ফেরত এসেছে।`
+        )
+      } catch (error) {
+        console.error('Error sending SMS:', error)
+      }
       return updatedOrder
     }
     const updatedOrder = await prisma.order.update({
@@ -851,6 +861,16 @@ class OrderServices {
         orderStatus: OrderStatus.returned,
       },
     })
+
+    try {
+      console.log('Sending SMS to seller:', updatedOrder.sellerPhoneNo)
+      await SmsServices.sendMessage(
+        updatedOrder.sellerPhoneNo,
+        `আপনার অর্ডার #${updatedOrder.orderId} ফেরত এসেছে।`
+      )
+    } catch (error) {
+      console.error('Error sending SMS:', error)
+    }
     return updatedOrder
   }
   async faultyOrderByAdmin(orderId: number, remarks?: string): Promise<Order> {
@@ -868,6 +888,10 @@ class OrderServices {
         remarks,
       },
     })
+    await SmsServices.sendMessage(
+      updatedOrder.sellerPhoneNo,
+      ` অনুগ্রহ করে এই অর্ডারটি (#${updatedOrder.orderId}) পুনরায় অর্ডার করুন।`
+    )
     return updatedOrder
   }
   async reOrderFaulty(orderId: number, sellerId: string): Promise<Order> {
@@ -886,6 +910,15 @@ class OrderServices {
       data: {
         orderStatus: OrderStatus.pending,
       },
+    })
+    await SmsServices.sendOrderNotificationToAdmin({
+      mobileNo: updatedOrder.sellerPhoneNo,
+      orderId: updatedOrder.orderId,
+      sellerName: updatedOrder.sellerName,
+      sellerPhoneNo: updatedOrder.sellerPhoneNo,
+      customerName: updatedOrder.customerName,
+      customerPhoneNo: updatedOrder.customerPhoneNo,
+      deliveryAddress: updatedOrder.deliveryAddress,
     })
     return updatedOrder
   }
