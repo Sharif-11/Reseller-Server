@@ -13,18 +13,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Utility = void 0;
-const bcrypt_1 = __importDefault(require("bcrypt"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const config_1 = __importDefault(require("../config"));
 class Utility {
     static hashPassword(password) {
         return __awaiter(this, void 0, void 0, function* () {
-            return bcrypt_1.default.hash(password, Number(config_1.default.saltRounds));
+            return bcryptjs_1.default.hash(password, Number(config_1.default.saltRounds));
         });
     }
     static comparePassword(password, hash) {
         return __awaiter(this, void 0, void 0, function* () {
-            return bcrypt_1.default.compare(password, hash);
+            return bcryptjs_1.default.compare(password, hash);
         });
     }
     static generateOtp() {
