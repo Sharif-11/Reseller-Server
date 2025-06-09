@@ -8,6 +8,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -154,6 +165,70 @@ class AuthServices {
             }
         });
     }
+    // create a customer
+    createCustomer(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ customerName, customerPhoneNo, sellerCode, password, }) {
+            try {
+                // Check if phone number already exists
+                const existingCustomer = yield prisma_1.default.customer.findUnique({
+                    where: { customerPhoneNo },
+                });
+                if (existingCustomer) {
+                    throw new ApiError_1.default(400, 'এই ফোন নম্বরটি ইতিমধ্যেই ব্যবহৃত হয়েছে');
+                }
+                // check if the customer is already registered with the seller
+                const existingCustomerWithSeller = yield prisma_1.default.user.findFirst({
+                    where: { phoneNo: customerPhoneNo },
+                });
+                if (existingCustomerWithSeller) {
+                    throw new ApiError_1.default(400, 'এই ফোন নম্বরটি ইতিমধ্যেই একজন বিক্রেতা হিসেবে নিবন্ধিত আছে');
+                }
+                // check
+                // Check if seller exists with the given seller code
+                const seller = yield prisma_1.default.user.findUnique({
+                    where: { referralCode: sellerCode },
+                    select: {
+                        userId: true,
+                        phoneNo: true,
+                        name: true,
+                    },
+                });
+                if (!seller) {
+                    throw new ApiError_1.default(400, 'এই বিক্রেতা কোডটি সঠিক নয়');
+                }
+                // check if the phoneNo is verified
+                const { isVerified } = yield contact_services_1.default.checkContactVerified(customerPhoneNo);
+                if (!isVerified) {
+                    throw new ApiError_1.default(400, 'এই ফোন নম্বরটি যাচাই করা হয়নি');
+                }
+                const hashedPassword = yield utility_services_1.default.hashPassword(password);
+                // Create the customer
+                const newCustomer = yield prisma_1.default.customer.create({
+                    data: {
+                        customerName,
+                        customerPhoneNo,
+                        sellerId: seller.userId,
+                        sellerCode,
+                        sellerName: seller.name,
+                        sellerPhone: seller.phoneNo,
+                        password: hashedPassword,
+                    },
+                });
+                // Return the created customer without password
+                const { password: _ } = newCustomer, customerWithoutPassword = __rest(newCustomer, ["password"]);
+                return customerWithoutPassword;
+            }
+            catch (error) {
+                if (error instanceof ApiError_1.default) {
+                    throw error;
+                }
+                else {
+                    console.log('error', error);
+                    throw new ApiError_1.default(500, 'কিছু একটা সমস্যা হয়েছে। দয়া করে পরে আবার চেষ্টা করুন।');
+                }
+            }
+        });
+    }
     /**
      * Login using phone number and password
      * @param phoneNo - The phone number of the user
@@ -171,6 +246,27 @@ class AuthServices {
             // Generate access token
             const token = utility_services_1.default.generateAccessToken(user.userId, user.role, user.phoneNo);
             return { user, token };
+        });
+    }
+    // customer login
+    loginWithCustomerPhoneNoAndPassword(customerPhoneNo, password) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const customer = yield prisma_1.default.customer.findUnique({
+                where: { customerPhoneNo },
+            });
+            if (!customer) {
+                throw new ApiError_1.default(404, 'কাস্টমার খুঁজে পাওয়া যায়নি');
+            }
+            // Compare passwords
+            const isPasswordValid = yield utility_services_1.default.comparePassword(password, customer.password);
+            if (!isPasswordValid) {
+                throw new ApiError_1.default(400, 'পাসওয়ার্ড সঠিক নয়');
+            }
+            // Generate access token
+            const token = utility_services_1.default.generateAccessToken(customer.customerId, 'Customer', customer.customerPhoneNo);
+            // return customer and token without password
+            const { password: _ } = customer, customerWithoutPassword = __rest(customer, ["password"]);
+            return { customer: customerWithoutPassword, token };
         });
     }
     checkIfAlreadyLoggedIn(userId) {
@@ -237,6 +333,30 @@ class AuthServices {
             const hashedPassword = yield utility_services_1.default.hashPassword(newPassword);
             // Update password
             return user_services_1.default.updatePassword(userId, hashedPassword);
+        });
+    }
+    // customer password update
+    updateCustomerPassword(customerId, currentPassword, newPassword) {
+        return __awaiter(this, void 0, void 0, function* () {
+            // Check if the customer exists
+            const customer = yield prisma_1.default.customer.findUnique({
+                where: { customerId },
+            });
+            if (!customer) {
+                throw new ApiError_1.default(404, 'কাস্টমার খুঁজে পাওয়া যায়নি');
+            }
+            // Compare current password
+            const isPasswordValid = yield utility_services_1.default.comparePassword(currentPassword, customer.password);
+            if (!isPasswordValid) {
+                throw new ApiError_1.default(400, 'বর্তমান পাসওয়ার্ড সঠিক নয়');
+            }
+            // Hash new password
+            const hashedPassword = yield utility_services_1.default.hashPassword(newPassword);
+            // Update password
+            return prisma_1.default.customer.update({
+                where: { customerId },
+                data: { password: hashedPassword },
+            });
         });
     }
     /**

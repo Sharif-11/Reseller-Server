@@ -25,6 +25,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const auth_services_1 = __importDefault(require("../services/auth.services"));
 const otp_services_1 = __importDefault(require("../services/otp.services"));
+const sms_services_1 = __importDefault(require("../services/sms.services"));
 const user_services_1 = __importDefault(require("../services/user.services"));
 class AuthController {
     /**
@@ -61,6 +62,23 @@ class AuthController {
                     message: 'সেলার সফলভাবে তৈরি হয়েছে',
                     success: true,
                     data: newUser,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    createCustomer(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const customerData = req.body;
+                const newCustomer = yield auth_services_1.default.createCustomer(customerData);
+                res.status(201).json({
+                    statusCode: 201,
+                    message: 'কাস্টমার সফলভাবে তৈরি হয়েছে',
+                    success: true,
+                    data: newCustomer,
                 });
             }
             catch (error) {
@@ -106,6 +124,27 @@ class AuthController {
                     data: {
                         user: userWithoutPassword,
                         token,
+                    },
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    loginWithCustomerPhoneNoAndPassword(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { phoneNo, password } = req.body;
+                const result = yield auth_services_1.default.loginWithCustomerPhoneNoAndPassword(phoneNo, password);
+                res.cookie('token', result.token, { httpOnly: true });
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'কাস্টমার লগইন সফল',
+                    success: true,
+                    data: {
+                        user: result.customer,
+                        token: result.token,
                     },
                 });
             }
@@ -212,6 +251,25 @@ class AuthController {
                     message: 'পাসওয়ার্ড সফলভাবে আপডেট করা হয়েছে',
                     success: true,
                     data: user,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    updateCustomerPassword(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+                const { currentPassword, newPassword } = req.body;
+                const updatedCustomer = yield auth_services_1.default.updateCustomerPassword(userId, currentPassword, newPassword);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'কাস্টমারের পাসওয়ার্ড সফলভাবে আপডেট করা হয়েছে',
+                    success: true,
+                    data: updatedCustomer,
                 });
             }
             catch (error) {
@@ -335,6 +393,23 @@ class AuthController {
                     message: 'সব সেলার সফলভাবে পাওয়া গেছে',
                     success: true,
                     data: sellers,
+                });
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
+    sendDirectMessageToSeller(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { phoneNo, message } = req.body;
+                const data = yield sms_services_1.default.sendMessage(phoneNo, message);
+                res.status(200).json({
+                    statusCode: 200,
+                    message: 'সেলারকে সফলভাবে বার্তা পাঠানো হয়েছে',
+                    success: true,
+                    data,
                 });
             }
             catch (error) {

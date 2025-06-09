@@ -121,7 +121,25 @@ class ContactServices {
     } else {
       throw new ApiError(400, 'Contact is not verified')
     }
-    return contact
+  }
+  async checkContactVerified(phoneNo: string) {
+    const contact = await prisma.contact.findUnique({
+      where: { phoneNo },
+    })
+    // check if contact is exist
+    if (!contact) {
+      throw new ApiError(404, 'কন্টাক্ট পাওয়া যায়নি')
+    }
+    // check if contact is blocked
+    if (contact.isBlocked) {
+      throw new ApiError(400, 'কন্টাক্ট ব্লক করা আছে')
+    }
+    // check if contact is verified
+    if (contact.isVerified) {
+      return { isVerified: true }
+    } else {
+      return { isVerified: false }
+    }
   }
 }
 

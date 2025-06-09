@@ -1,6 +1,9 @@
 import { Router } from 'express'
 import authControllers from '../controllers/auth.controllers'
-import { isAuthenticated } from '../middlewares/auth.middlewares'
+import {
+  isAuthenticated,
+  isCustomerAuthenticated,
+} from '../middlewares/auth.middlewares'
 import validateRequest from '../middlewares/validation.middleware'
 import {
   validateChangePassword,
@@ -17,57 +20,70 @@ authRouter.post(
   '/send-otp',
   validateSendOtp,
   validateRequest,
-  authControllers.sendOtp,
+  authControllers.sendOtp
 )
 authRouter.post(
   '/verify-otp',
   validateVerifyOtp,
   validateRequest,
-  authControllers.verifyOtp,
+  authControllers.verifyOtp
 )
 authRouter.post(
   '/login',
   validateLoginWithPhoneNoAndPassword,
   validateRequest,
-  authControllers.loginWithPhoneNoAndPassword,
+  authControllers.loginWithPhoneNoAndPassword
 )
 authRouter.post('/logout', isAuthenticated, authControllers.logout)
 authRouter.post(
   '/create-admin',
   validateCreateAdmin,
   validateRequest,
-  authControllers.createAdmin,
+  authControllers.createAdmin
 )
 authRouter.post(
   '/create-seller',
   validateCreateSeller,
   validateRequest,
-  authControllers.createSeller,
+  authControllers.createSeller
+)
+authRouter.post('/create-customer', authControllers.createCustomer)
+authRouter.post(
+  '/customer-login',
+  authControllers.loginWithCustomerPhoneNoAndPassword
 )
 authRouter.patch(
   '/change-password',
   isAuthenticated,
   validateChangePassword,
   validateRequest,
-  authControllers.updatePassword,
+  authControllers.updatePassword
+)
+authRouter.patch(
+  '/change-customer-password',
+  isCustomerAuthenticated,
+  validateChangePassword,
+  validateRequest,
+  authControllers.updateCustomerPassword
 )
 authRouter.patch(
   '/update-profile',
   isAuthenticated,
   validateUpdateProfile,
   validateRequest,
-  authControllers.updateProfile,
+  authControllers.updateProfile
 )
 authRouter.post(
   '/forgot-password',
+
   validateForgotPassword,
   validateRequest,
-  authControllers.forgotPassword,
+  authControllers.forgotPassword
 )
 authRouter.get(
   '/verify-login',
   isAuthenticated,
-  authControllers.checkIfAlreadyLoggedIn,
+  authControllers.checkIfAlreadyLoggedIn
 )
 
 export default authRouter

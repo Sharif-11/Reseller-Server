@@ -56,3 +56,32 @@ export const verifyAdmin = (
   }
   next()
 }
+
+export const isCustomerAuthenticated = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '')
+  if (!token) {
+    return next(new ApiError(401, 'Unauthorized'))
+  }
+  try {
+    const payload = jwt.verify(token, config.jwtSecret as string)
+    // check if user with userId exists
+    const { userId } = payload as any
+    const user = prisma.customer.findUnique({
+      where: { customerId: userId },
+    })
+
+    if (!user) {
+      throw new Error('Customer not found')
+    }
+
+    req.user = payload as any
+
+    next()
+  } catch (error) {
+    next(new ApiError(401, 'Unauthorized'))
+  }
+}

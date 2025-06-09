@@ -8,6 +8,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Contact {
+  id           String   @id @default(cuid()) // Use cuid for unique id
+  phoneNo      String   @unique
+  isVerified   Boolean  @default(false)
+  isBlocked    Boolean  @default(false)
+  totalOTP     Int      @default(0)
+  otp          String // Optional
+  otpCreatedAt DateTime // Optional, timestamp when OTP was created
+  createdAt    DateTime @default(now()) // Timestamp for creation
+  updatedAt    DateTime @updatedAt // Timestamp for updates
+
+  @@index([phoneNo], name: "contactIndex")
+  @@map("contacts") // Optional: Custom table name in the database
+}
+
 model User {
   userId                 String    @id @default(cuid()) // Use cuid for userId
   phoneNo                String    @unique
@@ -38,6 +53,25 @@ model User {
   @@map("users") // Optional: Custom table name in the database
 }
 
+model Customer {
+  customerId      String       @id @default(cuid())
+  customerName    String
+  customerPhoneNo String       @unique
+  password        String
+  role            CustomerRole @default(Customer) // Default role for customers
+
+  sellerId    String // Foreign key to User table (Seller)
+  sellerCode  String // Copied referral code from user
+  sellerName  String // Copied name of the referrer
+  sellerPhone String // Copied phone number of the referrer
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerPhoneNo], name: "customerPhoneIndex")
+  @@map("customers")
+}
+
 model Wallet {
   walletId      Int      @id @default(autoincrement()) // Primary key, auto-incremented
   walletName    String // Name of the wallet
@@ -50,21 +84,6 @@ model Wallet {
 
   @@unique([walletName, walletPhoneNo]) // Composite unique constraint
   @@map("wallets") // Optional: Custom table name in the database
-}
-
-model Contact {
-  id           String   @id @default(cuid()) // Use cuid for unique id
-  phoneNo      String   @unique
-  isVerified   Boolean  @default(false)
-  isBlocked    Boolean  @default(false)
-  totalOTP     Int      @default(0)
-  otp          String // Optional
-  otpCreatedAt DateTime // Optional, timestamp when OTP was created
-  createdAt    DateTime @default(now()) // Timestamp for creation
-  updatedAt    DateTime @updatedAt // Timestamp for updates
-
-  @@index([phoneNo], name: "contactIndex")
-  @@map("contacts") // Optional: Custom table name in the database
 }
 
 model WalletContact {
@@ -253,6 +272,53 @@ model Order {
   @@map("orders")
 }
 
+model CustomerOrder {
+  orderId        Int         @id @default(autoincrement())
+  orderStatus    OrderStatus @default(pending)
+  orderCreatedAt DateTime    @default(now())
+  orderUpdatedAt DateTime    @updatedAt
+  remarks        String? // Optional remarks for the order
+
+  // Customer Information
+  customerName     String
+  customerPhoneNo  String
+  customerZilla    String
+  customerUpazilla String
+  deliveryAddress  String
+  comments         String?
+
+  // Seller Information
+  sellerId    String // Foreign key to User table (Seller)
+  sellerCode  String // Copied referral code from user
+  sellerName  String // Copied name of the referrer
+  sellerPhone String // Copied phone number of the referrer
+
+  // Delivery Information
+  courierName    String?
+  trackingURL    String?
+  deliveryCharge Decimal @db.Decimal(15, 2)
+
+  // Order Products
+  orderProducts OrderProduct[]
+
+  // Payment Information
+  transactionId         String?  @unique
+  transactionVerified   Boolean? @default(false)
+  customerWalletName    String?
+  customerWalletPhoneNo String?
+  adminWalletId         Int
+  adminWalletName       String?
+  adminWalletPhoneNo    String?
+  totalAmount           Decimal  @db.Decimal(15, 2)
+
+  // Product Summary
+  totalProductQuantity     Int
+  totalProductBasePrice    Decimal @db.Decimal(15, 2)
+  totalProductSellingPrice Decimal @db.Decimal(15, 2)
+
+  @@map("customer_orders")
+}
+
 model OrderProduct {
   orderProductId           Int     @id @default(autoincrement())
   orderId                  Int
@@ -267,7 +333,9 @@ model OrderProduct {
   // selected option is an array of key value pairs
   selectedOptions          Json?
 
-  order Order @relation(fields: [orderId], references: [orderId], onDelete: Cascade) // Foreign key to Order table
+  order                Order          @relation(fields: [orderId], references: [orderId], onDelete: Cascade) // Foreign key to Order table
+  CustomerOrder        CustomerOrder? @relation(fields: [customerOrderOrderId], references: [orderId])
+  customerOrderOrderId Int?
 
   @@map("order_products")
 }
@@ -351,5 +419,10 @@ enum PaymentStatus {
 enum PaymentType {
   DuePayment
   OrderPayment
+  CustomerOrderPayment
   WithdrawPayment
+}
+
+enum CustomerRole {
+  Customer
 }

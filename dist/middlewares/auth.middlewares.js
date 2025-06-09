@@ -13,7 +13,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyAdmin = exports.verifySeller = exports.isAuthenticated = void 0;
+exports.isCustomerAuthenticated = exports.verifyAdmin = exports.verifySeller = exports.isAuthenticated = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const config_1 = __importDefault(require("../config"));
 const ApiError_1 = __importDefault(require("../utils/ApiError"));
@@ -57,3 +57,27 @@ const verifyAdmin = (req, res, next) => {
     next();
 };
 exports.verifyAdmin = verifyAdmin;
+const isCustomerAuthenticated = (req, res, next) => {
+    var _a;
+    const token = (_a = req.header('Authorization')) === null || _a === void 0 ? void 0 : _a.replace('Bearer ', '');
+    if (!token) {
+        return next(new ApiError_1.default(401, 'Unauthorized'));
+    }
+    try {
+        const payload = jsonwebtoken_1.default.verify(token, config_1.default.jwtSecret);
+        // check if user with userId exists
+        const { userId } = payload;
+        const user = prisma_1.default.customer.findUnique({
+            where: { customerId: userId },
+        });
+        if (!user) {
+            throw new Error('Customer not found');
+        }
+        req.user = payload;
+        next();
+    }
+    catch (error) {
+        next(new ApiError_1.default(401, 'Unauthorized'));
+    }
+};
+exports.isCustomerAuthenticated = isCustomerAuthenticated;

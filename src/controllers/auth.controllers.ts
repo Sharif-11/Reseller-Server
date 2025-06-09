@@ -4,6 +4,7 @@ import {
   default as authServices,
 } from '../services/auth.services'
 import otpServices from '../services/otp.services'
+import SmsServices from '../services/sms.services'
 import userServices from '../services/user.services'
 
 class AuthController {
@@ -39,6 +40,20 @@ class AuthController {
         message: 'সেলার সফলভাবে তৈরি হয়েছে',
         success: true,
         data: newUser,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  async createCustomer(req: Request, res: Response, next: NextFunction) {
+    try {
+      const customerData = req.body
+      const newCustomer = await AuthServices.createCustomer(customerData)
+      res.status(201).json({
+        statusCode: 201,
+        message: 'কাস্টমার সফলভাবে তৈরি হয়েছে',
+        success: true,
+        data: newCustomer,
       })
     } catch (error) {
       next(error)
@@ -94,6 +109,33 @@ class AuthController {
       next(error)
     }
   }
+  async loginWithCustomerPhoneNoAndPassword(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { phoneNo, password } = req.body
+      const result = await AuthServices.loginWithCustomerPhoneNoAndPassword(
+        phoneNo,
+        password
+      )
+
+      res.cookie('token', result.token, { httpOnly: true })
+      res.status(200).json({
+        statusCode: 200,
+        message: 'কাস্টমার লগইন সফল',
+        success: true,
+        data: {
+          user: result.customer,
+          token: result.token,
+        },
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
   async logout(req: Request, res: Response, next: NextFunction) {
     try {
       res.clearCookie('token')
@@ -188,6 +230,30 @@ class AuthController {
         message: 'পাসওয়ার্ড সফলভাবে আপডেট করা হয়েছে',
         success: true,
         data: user,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  async updateCustomerPassword(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const userId = req.user?.userId
+      const { currentPassword, newPassword } = req.body
+      const updatedCustomer = await AuthServices.updateCustomerPassword(
+        userId as string,
+        currentPassword,
+        newPassword
+      )
+      res.status(200).json({
+        statusCode: 200,
+        message: 'কাস্টমারের পাসওয়ার্ড সফলভাবে আপডেট করা হয়েছে',
+        success: true,
+        data: updatedCustomer,
       })
     } catch (error) {
       next(error)
@@ -307,6 +373,24 @@ class AuthController {
         message: 'সব সেলার সফলভাবে পাওয়া গেছে',
         success: true,
         data: sellers,
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+  async sendDirectMessageToSeller(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { phoneNo, message } = req.body
+      const data = await SmsServices.sendMessage(phoneNo, message)
+      res.status(200).json({
+        statusCode: 200,
+        message: 'সেলারকে সফলভাবে বার্তা পাঠানো হয়েছে',
+        success: true,
+        data,
       })
     } catch (error) {
       next(error)

@@ -15,7 +15,10 @@ authRouter.post('/login', auth_validators_1.validateLoginWithPhoneNoAndPassword,
 authRouter.post('/logout', auth_middlewares_1.isAuthenticated, auth_controllers_1.default.logout);
 authRouter.post('/create-admin', auth_validators_1.validateCreateAdmin, validation_middleware_1.default, auth_controllers_1.default.createAdmin);
 authRouter.post('/create-seller', auth_validators_1.validateCreateSeller, validation_middleware_1.default, auth_controllers_1.default.createSeller);
+authRouter.post('/create-customer', auth_controllers_1.default.createCustomer);
+authRouter.post('/customer-login', auth_controllers_1.default.loginWithCustomerPhoneNoAndPassword);
 authRouter.patch('/change-password', auth_middlewares_1.isAuthenticated, auth_validators_1.validateChangePassword, validation_middleware_1.default, auth_controllers_1.default.updatePassword);
+authRouter.patch('/change-customer-password', auth_middlewares_1.isCustomerAuthenticated, auth_validators_1.validateChangePassword, validation_middleware_1.default, auth_controllers_1.default.updateCustomerPassword);
 authRouter.patch('/update-profile', auth_middlewares_1.isAuthenticated, auth_validators_1.validateUpdateProfile, validation_middleware_1.default, auth_controllers_1.default.updateProfile);
 authRouter.post('/forgot-password', auth_validators_1.validateForgotPassword, validation_middleware_1.default, auth_controllers_1.default.forgotPassword);
 authRouter.get('/verify-login', auth_middlewares_1.isAuthenticated, auth_controllers_1.default.checkIfAlreadyLoggedIn);

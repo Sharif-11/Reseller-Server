@@ -174,6 +174,81 @@ class AuthServices {
     }
   }
 
+  // create a customer
+  async createCustomer({
+    customerName,
+    customerPhoneNo,
+    sellerCode,
+    password,
+  }: Prisma.CustomerCreateInput) {
+    try {
+      // Check if phone number already exists
+      const existingCustomer = await prisma.customer.findUnique({
+        where: { customerPhoneNo },
+      })
+      if (existingCustomer) {
+        throw new ApiError(400, 'এই ফোন নম্বরটি ইতিমধ্যেই ব্যবহৃত হয়েছে')
+      }
+      // check if the customer is already registered with the seller
+      const existingCustomerWithSeller = await prisma.user.findFirst({
+        where: { phoneNo: customerPhoneNo },
+      })
+      if (existingCustomerWithSeller) {
+        throw new ApiError(
+          400,
+          'এই ফোন নম্বরটি ইতিমধ্যেই একজন বিক্রেতা হিসেবে নিবন্ধিত আছে'
+        )
+      }
+      // check
+      // Check if seller exists with the given seller code
+      const seller = await prisma.user.findUnique({
+        where: { referralCode: sellerCode },
+        select: {
+          userId: true,
+          phoneNo: true,
+          name: true,
+        },
+      })
+      if (!seller) {
+        throw new ApiError(400, 'এই বিক্রেতা কোডটি সঠিক নয়')
+      }
+      // check if the phoneNo is verified
+      const { isVerified } = await contactServices.checkContactVerified(
+        customerPhoneNo
+      )
+      if (!isVerified) {
+        throw new ApiError(400, 'এই ফোন নম্বরটি যাচাই করা হয়নি')
+      }
+      const hashedPassword = await Utility.hashPassword(password)
+      // Create the customer
+      const newCustomer = await prisma.customer.create({
+        data: {
+          customerName,
+          customerPhoneNo,
+          sellerId: seller.userId,
+          sellerCode,
+          sellerName: seller.name,
+          sellerPhone: seller.phoneNo,
+          password: hashedPassword,
+        },
+      })
+
+      // Return the created customer without password
+      const { password: _, ...customerWithoutPassword } = newCustomer
+      return customerWithoutPassword
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error
+      } else {
+        console.log('error', error)
+        throw new ApiError(
+          500,
+          'কিছু একটা সমস্যা হয়েছে। দয়া করে পরে আবার চেষ্টা করুন।'
+        )
+      }
+    }
+  }
+
   /**
    * Login using phone number and password
    * @param phoneNo - The phone number of the user
@@ -200,6 +275,38 @@ class AuthServices {
     )
 
     return { user, token }
+  }
+  // customer login
+  async loginWithCustomerPhoneNoAndPassword(
+    customerPhoneNo: string,
+    password: string
+  ) {
+    const customer = await prisma.customer.findUnique({
+      where: { customerPhoneNo },
+    })
+
+    if (!customer) {
+      throw new ApiError(404, 'কাস্টমার খুঁজে পাওয়া যায়নি')
+    }
+
+    // Compare passwords
+    const isPasswordValid = await Utility.comparePassword(
+      password,
+      customer.password
+    )
+    if (!isPasswordValid) {
+      throw new ApiError(400, 'পাসওয়ার্ড সঠিক নয়')
+    }
+
+    // Generate access token
+    const token = Utility.generateAccessToken(
+      customer.customerId,
+      'Customer',
+      customer.customerPhoneNo
+    )
+    // return customer and token without password
+    const { password: _, ...customerWithoutPassword } = customer
+    return { customer: customerWithoutPassword, token }
   }
   async checkIfAlreadyLoggedIn(userId: string) {
     const user = await userServices.getUserByUserId(userId)
@@ -270,6 +377,40 @@ class AuthServices {
 
     // Update password
     return userServices.updatePassword(userId, hashedPassword)
+  }
+
+  // customer password update
+  async updateCustomerPassword(
+    customerId: string,
+    currentPassword: string,
+    newPassword: string
+  ) {
+    // Check if the customer exists
+    const customer = await prisma.customer.findUnique({
+      where: { customerId },
+    })
+
+    if (!customer) {
+      throw new ApiError(404, 'কাস্টমার খুঁজে পাওয়া যায়নি')
+    }
+
+    // Compare current password
+    const isPasswordValid = await Utility.comparePassword(
+      currentPassword,
+      customer.password
+    )
+    if (!isPasswordValid) {
+      throw new ApiError(400, 'বর্তমান পাসওয়ার্ড সঠিক নয়')
+    }
+
+    // Hash new password
+    const hashedPassword = await Utility.hashPassword(newPassword)
+
+    // Update password
+    return prisma.customer.update({
+      where: { customerId },
+      data: { password: hashedPassword },
+    })
   }
 
   /**
