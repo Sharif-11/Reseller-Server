@@ -86,6 +86,32 @@ class AuthController {
             }
         });
     }
+    checkExistingCustomer(req, res, next) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const { phoneNo } = req.body;
+                const customer = yield auth_services_1.default.checkExistingCustomer(phoneNo);
+                if (customer) {
+                    res.status(200).json({
+                        statusCode: 200,
+                        message: 'কাস্টমার ইতিমধ্যে বিদ্যমান',
+                        success: true,
+                        data: customer,
+                    });
+                }
+                else {
+                    res.status(404).json({
+                        statusCode: 404,
+                        message: 'কাস্টমার পাওয়া যায়নি',
+                        success: false,
+                    });
+                }
+            }
+            catch (error) {
+                next(error);
+            }
+        });
+    }
     checkIfAlreadyLoggedIn(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;

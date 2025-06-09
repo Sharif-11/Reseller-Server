@@ -48,6 +48,7 @@ authRouter.post(
   authControllers.createSeller
 )
 authRouter.post('/create-customer', authControllers.createCustomer)
+authRouter.get('/check-customer', authControllers.checkExistingCustomer)
 authRouter.post(
   '/customer-login',
   authControllers.loginWithCustomerPhoneNoAndPassword

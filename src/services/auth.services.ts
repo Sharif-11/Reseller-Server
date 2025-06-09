@@ -308,6 +308,18 @@ class AuthServices {
     const { password: _, ...customerWithoutPassword } = customer
     return { customer: customerWithoutPassword, token }
   }
+  async checkExistingCustomer(customerPhoneNo: string) {
+    const customer = await prisma.customer.findFirst({
+      where: { customerPhoneNo },
+    })
+
+    if (!customer) {
+      throw new ApiError(404, 'Customer not found')
+    }
+    // returnm customer without password
+    const { password: _, ...customerWithoutPassword } = customer
+    return customerWithoutPassword
+  }
   async checkIfAlreadyLoggedIn(userId: string) {
     const user = await userServices.getUserByUserId(userId)
 

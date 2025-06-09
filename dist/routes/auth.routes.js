@@ -16,6 +16,7 @@ authRouter.post('/logout', auth_middlewares_1.isAuthenticated, auth_controllers_
 authRouter.post('/create-admin', auth_validators_1.validateCreateAdmin, validation_middleware_1.default, auth_controllers_1.default.createAdmin);
 authRouter.post('/create-seller', auth_validators_1.validateCreateSeller, validation_middleware_1.default, auth_controllers_1.default.createSeller);
 authRouter.post('/create-customer', auth_controllers_1.default.createCustomer);
+authRouter.get('/check-customer', auth_controllers_1.default.checkExistingCustomer);
 authRouter.post('/customer-login', auth_controllers_1.default.loginWithCustomerPhoneNoAndPassword);
 authRouter.patch('/change-password', auth_middlewares_1.isAuthenticated, auth_validators_1.validateChangePassword, validation_middleware_1.default, auth_controllers_1.default.updatePassword);
 authRouter.patch('/change-customer-password', auth_middlewares_1.isCustomerAuthenticated, auth_validators_1.validateChangePassword, validation_middleware_1.default, auth_controllers_1.default.updateCustomerPassword);

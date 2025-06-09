@@ -269,6 +269,19 @@ class AuthServices {
             return { customer: customerWithoutPassword, token };
         });
     }
+    checkExistingCustomer(customerPhoneNo) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const customer = yield prisma_1.default.customer.findFirst({
+                where: { customerPhoneNo },
+            });
+            if (!customer) {
+                throw new ApiError_1.default(404, 'Customer not found');
+            }
+            // returnm customer without password
+            const { password: _ } = customer, customerWithoutPassword = __rest(customer, ["password"]);
+            return customerWithoutPassword;
+        });
+    }
     checkIfAlreadyLoggedIn(userId) {
         return __awaiter(this, void 0, void 0, function* () {
             const user = yield user_services_1.default.getUserByUserId(userId);
