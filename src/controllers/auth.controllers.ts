@@ -61,7 +61,7 @@ class AuthController {
   }
   async checkExistingCustomer(req: Request, res: Response, next: NextFunction) {
     try {
-      const { phoneNo } = req.body
+      const { phoneNo } = req.params
       const customer = await AuthServices.checkExistingCustomer(phoneNo)
       if (customer) {
         res.status(200).json({

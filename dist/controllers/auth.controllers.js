@@ -89,7 +89,7 @@ class AuthController {
     checkExistingCustomer(req, res, next) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { phoneNo } = req.body;
+                const { phoneNo } = req.params;
                 const customer = yield auth_services_1.default.checkExistingCustomer(phoneNo);
                 if (customer) {
                     res.status(200).json({
